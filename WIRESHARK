@@ -1,0 +1,3 @@
+use this expression to trace BibleSync.
+watch both net device and loopback.
+ip.addr == 239.225.27.227

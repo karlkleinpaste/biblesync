@@ -1,0 +1,27 @@
+/******************************************************************************
+ *
+ * biblesync-version.h - version constants.
+ *
+ * BibleSync library
+ * Karl Kleinpaste, May 2014
+ *
+ * All files related to implementation of BibleSync, including program
+ * source, READMEs, manual pages, and related similar documents, are in
+ * the public domain.  As a matter of simple decency, your social
+ * obligations are to credit the source and to coordinate any changes you
+ * make back to the origin repository.  These obligations are non-
+ * binding for public domain software, but they are to be seriously
+ * handled nonetheless.
+ */
+
+#ifndef BIBLESYNC_VERSION_HH
+#define BIBLESYNC_VERSION_HH
+
+#define BIBLESYNC_VERSION_NUM @BIBLESYNC_VERSION_NUM@
+#define BIBLESYNC_VERSION_STR "@BIBLESYNC_VERSION_STR@"
+#define BIBLESYNC_VERSION_MAJOR @BIBLESYNC_VERSION_MAJOR@
+#define BIBLESYNC_VERSION_MINOR @BIBLESYNC_VERSION_MINOR@
+#define BIBLESYNC_VERSION_MICRO @BIBLESYNC_VERSION_MICRO@
+#define BIBLESYNC_VERSION_NANO @BIBLESYNC_VERSION_NANO@
+
+#endif	// BIBLESYNC_VERSION_HH

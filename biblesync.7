@@ -1,0 +1,341 @@
+.\" BibleSync library
+.\" Karl Kleinpaste, May 2014
+.\"
+.\" All files related to implementation of BibleSync, including program
+.\" source, READMEs, manual pages, and related similar documents, are in
+.\" the public domain.  As a matter of simple decency, your social
+.\" obligations are to credit the source and to coordinate any changes you
+.\" make back to the origin repository.  These obligations are non-
+.\" binding for public domain software, but they are to be seriously
+.\" handled nonetheless.
+.TH BIBLESYNC 7 2014-05-05 "Linux" "Linux Programmer's Manual"
+.SH NAME
+biblesync \- multicast navigation synchronization in Bible programs
+.SH SYNOPSIS
+.nf
+.B #include <biblesync.hh>
+.sp
+.BI "typedef enum" _BibleSync_mode " {"
+.br
+.BI "    " BSP_MODE_DISABLE ","
+.br
+.BI "    " BSP_MODE_PERSONAL ","
+.br
+.BI "    " BSP_MODE_SPEAKER ","
+.br
+.BI "    " BSP_MODE_AUDIENCE ","
+.br
+.BI "    " N_BSP_MODE
+.br
+.BI "} BibleSync_mode;"
+.sp
+.BI "typedef enum" _BibleSync_xmit_status " {"
+.br
+.BI "    " BSP_XMIT_OK ","
+.br
+.BI "    " BSP_XMIT_FAILED ","
+.br
+.BI "    " BSP_XMIT_NO_SOCKET ","
+.br
+.BI "    " BSP_XMIT_BAD_TYPE ","
+.br
+.BI "    " BSP_XMIT_NO_AUDIENCE_XMIT ","
+.br
+.BI "    " BSP_XMIT_RECEIVING ","
+.br
+.BI "    " N_BSP_XMIT
+.br
+.BI "} BibleSync_xmit_status;"
+.sp
+.BI "#define BSP_ANNOUNCE   1"
+.br
+.BI "#define BSP_SYNC       2"
+.sp
+.BI "typedef void (*BibleSync_navigate)(char " cmd ","
+.br
+.BI "                                   string " bible ", string " ref ", string " alt ","
+.br
+.BI "                                   string " group ", string " domain ","
+.br
+.BI "                                   string " info ",  string " dump ");"
+.sp
+Public interface:
+.sp
+.BI "BibleSync *object = new BibleSync(string " application ","
+.br
+.BI "                                  string " version ","
+.br
+.BI "                                  string " user ");"
+.sp
+.BI "BibleSync_mode BibleSync::setMode(BibleSync_mode " mode ","
+.br
+.BI "                                  BibleSync_navigate *" nav_func ","
+.br
+.BI "                                  string " passPhrase ");"
+.br
+.BI "BibleSync_mode BibleSync::getMode(void);"
+.br
+.BI "string BibleSync::getPassphrase(void);"
+.br
+.BI "BibleSync_xmit_status BibleSync::Transmit(char " type ","
+.br
+.BI "                                          string " bible ", string " ref ", string " alt ","
+.br
+.BI "                                          string " group ", string " domain ");"
+.br
+.BI "static int BibleSync::Receive(void *" object ");"
+.br
+.BI "bool BibleSync::setPrivate(bool " privacy ");"
+.fi
+.SH DESCRIPTION
+.I BibleSync
+is a published protocol specification by which cooperating Bible programs
+navigate together.  It is implemented as a C++ class providing a small,
+clean interface including basic setup, take-down, transmit, polled
+receive, and a bare few utility methods.
+
+The value of
+.I BibleSync
+is found in several examples:
+
+A single user may have multiple programs, or multiple computers/devices,
+all of which he wishes to follow along together.
+
+Similarly, a group of people working closely together, such as
+translators, can stay together as they work.
+
+In an instructional motif,
+.I BibleSync
+takes either the active or passive mode, providing for a unidirectional
+navigation control.
+.SH BIBLESYNC ESSENTIALS
+.I BibleSync
+communicates using local multicast.  Three operational modes are provided:
+Personal, Speaker, or Audience.
+
+In Personal mode, BibleSync operates as a peer among peers, both sending
+and receiving navigation synchronization on the shared local multicast
+network.  Applications are expected to respond appropriately to
+navigation, and to send synchronization events of their own as the user
+moves about his Bible.
+
+In Speaker or Audience mode,
+.I BibleSync
+either transmits only (Speaker) or receives only (Audience) navigation.
+The Audience is expected to follow along with the Speaker's direction.
+The Speaker ignores incoming navigation; the Audience transmits no
+navigation.
+
+The difference between Personal and Speaker/Audience is thus strictly as
+to whether both sides of the conversation are active for each participant.
+
+On startup of the protocol, BibleSync transmits a presence announcement,
+informing other communication partners of the application's participation.
+.I BibleSync
+makes this announcement available to the application; whether the
+application shows these announcements to the user is the application
+designer's choice.
+
+Thereafter, as appropriate to the operational mode selected, BibleSync is
+tasked with polled reception of incoming navigation event packets and
+transmission of navigation event packets on the user's part.
+
+Synchronization events include 5 data elements: The Bible abbreviation;
+the verse reference; an alternate reference (if desired; not required)
+which may allow the application to interpret better based on variant
+versification; a synchronization group identifier; and the domain.
+
+The group identifier is a single digit between 1 and 9.  The specification
+is imprecise as to this parameter's use.  The initial implementation of
+.I BibleSync
+in
+.I Xiphos
+uses the synchronization group as an indicator of the tab number in its
+tabbed interface: Not only is the Bible navigated, but the tab in which to
+navigate is selected.
+
+The domain parameter is currently fixed as "BIBLE-VERSE".  It will be put
+to greater use in future revisions of the protocol.
+
+.I BibleSync
+transmits no packet when the application leaves the conversation.
+
+Only the 2 packet types BSP_ANNOUNCE and BSP_SYNC are defined in the
+protocol.
+.SH BIBLESYNC PUBLIC INTERFACE
+.SS Object creation
+The application must create a single BibleSync object, identifying the
+application's name, its version, and the user.
+.SS setMode
+setMode identifies how
+.I BibleSync
+should behave. The application must provide as well the navigation
+callback function by which
+.I BibleSync
+will inform the application of incoming events; the callback makes all the
+navigation parameters provided in event packets available to the
+application.  setMode returns the resulting mode.  The application
+provides the passphrase to be used as well; this argument defaults to ""
+(empty string), indicating that the existing passphrase should be left in
+place.
+.SS getMode
+The application may request the current mode.
+.SS getPassphrase
+Intended for use when preparing to enter any active mode, the application
+may request the current passphrase, so as to provide a default.
+.SS Transmit
+The application must provide the message type, which in the normal case
+should be
+.I BSP_SYNC.
+The protocol requires all the indicated parameters, but all have defaults
+in Transmit: KJV, Gen.1.1, empty alternate, 1, and BIBLE-VERSE.
+.SS Receive
+Receive is a static method accessible from either C or C++.  It must be
+called with the object pointer so as to re-enter object context for the
+private internal receiver.  Receive must be called regularly (i.e. polled)
+as long as it continues to return TRUE.  When it returns FALSE, it means
+that the mode has changed to BSP_MODE_DISABLE, and the scheduled polling
+should stop.  See also the note below on polled reception.
+.SS setPrivate
+In the circumstance where the user has multiple programs running on a
+single computer and does not want his navigation broadcast outside that
+single system, when in Personal mode, the application may also request
+privacy.  The effect is to set multicast TTL to zero, meaning that packets
+will not go out on the wire.
+.SH RECEIVE USE CASES
+There are 4 values for the
+.I cmd
+parameter of the
+.I nav_func.
+In all cases, the
+.I dump
+parameter provides the raw content of an arriving packet.
+.SS 'A'
+Announce.  A general presence message is in
+.I alt,
+and the individual elements are also available, as overloaded use of the
+parameters:
+.I bible
+contains the user;
+.I ref
+contains the IP address;
+.I group
+contains the application name; and
+.I domain
+contains the application version.
+.SS 'N'
+Navigation.  The
+.I bible, ref, alt, group,
+and
+.I domain
+parameters are presented as they arrived.
+.I info
+and
+.I dump
+are also available.
+.SS 'M'
+Mismatch.  The incoming event packet is mismatched, either against the
+current passphrase or for a navigation synchronization packet when
+.I BibleSync
+is in Speaker mode.  The
+.I info
+parameter begins with either "announce" or "sync", plus the user and IP
+address from whom the packet came.  As well, in the sync case, the
+regular
+.I bible, ref, alt, group,
+and
+.I domain
+parameters are available.  In the announce case, the presence message is
+in
+.I alt,
+with overloaded individual parameters as previously described.
+.SS 'E'
+Error.  This indicates network errors and malformed packets.  The
+application's
+.I nav_func
+is provided only the
+.I info
+and
+.I dump
+parameters.
+.SH NOTES
+.SS Polled reception
+The application must provide a means by which to poll regularly for
+incoming packets.  In
+.I Xiphos,
+which is built on GTK and GLib, this is readily provided by mechanisms
+like g_timeout_add(), which sets a regular interval call of the indicated
+function.  GLib will re-schedule the call as long as the called function
+returns TRUE.  When it returns FALSE, GLib un-schedules the call.  Receive
+adheres to this straightforward convention.  Therefore, it is imperative
+that every time the application moves from disabled to any non-disabled
+mode, Receive is again scheduled for polled use.
+
+A 1- or 2-second poll interval is suggested.  Brief experience during
+development has shown that longer intervals lead to a perception of lag.
+
+During every Receive call, all waiting packets are processed.
+.SS No datalink security
+.I BibleSync
+is a protocol defined for a friendly environment.  It offers no security
+in its current specification, and any packet sniffer such as wireshark(1)
+or tcpdump(8) can see the entire conversation.  The specification makes
+passing reference to future encryption, but at this time none is
+implemented.
+.SS Protocol extensions
+This implementation takes certain liberties with the specification.  In
+light of this being the first functioning, published implementation of
+.I BibleSync,
+these changes are intended to be reflected in a near-future specification
+update.
+.SS Conformity checks
+This implementation does not guarantee conformity of incoming packets in 2
+areas:
+
+The names in the "name=value" pairs are expected to be composed from a
+particular character subset.  This implementation does not verify this.
+At this time, any non-NUL characters left of '=' are acceptable.
+
+Continuation lines in "name=value" pairs are defined by the specification,
+but this implementation does not support it.
+.SS Sending verse lists
+One of the better uses of
+.I BibleSync
+is in sharing verse lists.  Consider a relatively weak application,
+perhaps on a mobile device, and a desktop-based application with strong
+search capability.  Run searches on the desktop, and send the result via
+.I BibleSync
+to the mobile app.  The
+.I ref
+parameter is not confined to a single reference.  In normal citation
+syntax, the verse reference may consist of semicolon-separated references,
+comma-separated verses, and hyphen-separated ranges.  Be aware that the
+specification has a relatively short limit on packet size, so that at most
+a few dozen references will be sent.
+.SS Standard reference syntax
+It is the responsibility of the application to transmit references in
+standard format.
+.I BibleSync
+neither validates nor converts the application's incoming
+.I bible, ref,
+and
+.I alt
+parameters.  The specification references the BibleRef and OSIS
+specifications.
+.SH SEE ALSO
+http://biblesyncprotocol.wikispaces.com (user "General_Public", password
+"password"),
+http://semanticbible.com/bibleref/bibleref-specification.html,
+.BR socket(2),
+.BR setsockopt(2),
+.BR select(2),
+.BR recvfrom(2),
+.BR sendto(2),
+and
+.BR ip(7),
+especially sections on
+.I IP_ADD_MEMBERSHIP,
+.I IP_MULTICAST_IF,
+.I IP_MULTICAST_LOOP,
+and
+.I IP_MULTICAST_TTL.
