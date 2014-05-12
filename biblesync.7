@@ -75,6 +75,8 @@ Public interface:
 .br
 .BI "BibleSync_mode BibleSync::getMode(void);"
 .br
+.BI "string BibleSync::getVersion(void);"
+.br
 .BI "string BibleSync::getPassphrase(void);"
 .br
 .BI "BibleSync_xmit_status BibleSync::Transmit(char " type ","
@@ -180,6 +182,8 @@ provides the passphrase to be used as well; this argument defaults to ""
 place.
 .SS getMode
 The application may request the current mode.
+.SS getVersion
+The version string of the library itself is returned.
 .SS getPassphrase
 Intended for use when preparing to enter any active mode, the application
 may request the current passphrase, so as to provide a default.

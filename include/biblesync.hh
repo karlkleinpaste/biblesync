@@ -21,6 +21,8 @@
 #define	_(x)	gettext(x)
 #endif
 
+#include "biblesync/biblesync-version.hh"
+
 //
 // Bible Sync Protocol.
 // http://biblesyncprotocol.wikispaces.com/
@@ -238,6 +240,9 @@ private:
 	char      body[BSP_MAX_PAYLOAD+1];	// +1 for stuffing '\0'.
     } BibleSyncMessage;
 
+    // self identification.
+    string BibleSync_version;
+
     // application identifiers.
     string application;
     string version;
@@ -302,6 +307,9 @@ public:
 			   BibleSync_navigate n = NULL,
 			   string p = "");
     inline BibleSync_mode getMode(void) { return mode; };
+
+    // library identification.
+    inline string getVersion(void) { return BibleSync_version; };
 
     // obtain passphrase, for default choice.
     inline string getPassphrase(void) { return passphrase; };
