@@ -25,11 +25,6 @@ ELSE(BUILD_SHARED_LIBS)
     ADD_LIBRARY(biblesync STATIC ${biblesync_sources})
 ENDIF(BUILD_SHARED_LIBS)
 
-# Headers and linkage from libuuid
-FIND_PACKAGE(UUID REQUIRED)
-INCLUDE_DIRECTORIES("${UUID_INCLUDE_DIRS}")
-TARGET_LINK_LIBRARIES(biblesync "${UUID_LIBRARIES}")
-
 # Set the default headers location
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -37,6 +32,11 @@ INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/include")
 IF(WIN32)
     MESSAGE(STATUS "Building for Win32")
     ADD_DEFINITIONS(-DWIN32)
+ELSE(WIN32)
+    # Headers and linkage from libuuid
+    FIND_PACKAGE(UUID REQUIRED)
+    INCLUDE_DIRECTORIES("${UUID_INCLUDE_DIRS}")
+    TARGET_LINK_LIBRARIES(biblesync "${UUID_LIBRARIES}")
 ENDIF(WIN32)
 
 # Allow build systems to specify non-standard install locations
