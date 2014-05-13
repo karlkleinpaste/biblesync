@@ -103,3 +103,5 @@ INSTALL(TARGETS biblesync
     DESTINATION "${LIBDIR}")
 INSTALL(FILES ${biblesync_headers}
     DESTINATION "${INCLUDEDIR}")
+INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/biblesync.pc"
+    DESTINATION "${LIBDIR}/pkgconfig")
