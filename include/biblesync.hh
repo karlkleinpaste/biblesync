@@ -21,7 +21,11 @@
 #define	_(x)	gettext(x)
 #endif
 
+#ifdef BUILDING
+#include "biblesync-version.hh"
+#else
 #include "biblesync/biblesync-version.hh"
+#endif
 
 //
 // Bible Sync Protocol.
