@@ -3,6 +3,7 @@
 # - CMAKE_INSTALL_PREFIX (default "/usr/local") - set to directory where you want libs installed
 # - LIBDIR (default "CMAKE_INSTALL_PREFIX/lib") - set to directory where binaries should be installed
 # - INCLUDEDIR (default "CMAKE_INSTALL_PREFIX/include") - set to directory where header files should be installed to
+# - BIBLESYNC_SOVERSION (defaults to BIBLESYNC_VERSION) - Manually set the SOVERSION of the installed file
 PROJECT(libbiblesync CXX)
 SET(BIBLESYNC_VERSION 1.0.0)
 # A required CMake line
@@ -27,11 +28,14 @@ ENDIF(BUILD_SHARED_LIBS)
 
 # Set the default headers location
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/include")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/include")
+ADD_DEFINITIONS(-DBUILDING)
 
 # System defines
 IF(WIN32)
     MESSAGE(STATUS "Building for Win32")
     ADD_DEFINITIONS(-DWIN32)
+    TARGET_LINK_LIBRARIES(biblesync "ws2_32" "rpcrt4" "intl")
 ELSE(WIN32)
     # Headers and linkage from libuuid
     FIND_PACKAGE(UUID REQUIRED)
@@ -86,9 +90,14 @@ SET(BIBLESYNC_VERSION_NUM "${BIBLESYNC_VERSION_MAJOR}${MINOR}${MICRO}${NANO}")
 # End of copy from Sword's code
 ##########################################################################################
 
+# Set the SOVERSION of the package, for binary compatability tracking
+INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/soversion.cmake")
+
 # Set the variables in the .in file
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/include/biblesync-version.hh.in 
     ${CMAKE_CURRENT_BINARY_DIR}/include/biblesync-version.hh @ONLY)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/biblesync.pc.in 
+    ${CMAKE_CURRENT_BINARY_DIR}/biblesync.pc @ONLY)
 
 # Install both the library and its headers
 INSTALL(TARGETS biblesync
