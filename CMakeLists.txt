@@ -35,6 +35,7 @@ ADD_DEFINITIONS(-DBUILDING)
 IF(WIN32)
     MESSAGE(STATUS "Building for Win32")
     ADD_DEFINITIONS(-DWIN32)
+    TARGET_LINK_LIBRARIES(biblesync "ws2_32" "rpcrt4" "intl")
 ELSE(WIN32)
     # Headers and linkage from libuuid
     FIND_PACKAGE(UUID REQUIRED)
