@@ -5,7 +5,7 @@ includedir=@INCLUDEDIR@
 
 Name: BibleSync
 Description: Bible software multicast co-navigation
-Version: @VERSION@
+Version: @BIBLESYNC_VERSION_STR@
 @SHAREDLIB_TRUE@Libs: -L${libdir} -lbiblesync
 @SHAREDLIB_FALSE@Libs: -L${libdir} -lbiblesync @LIBS@
 Libs.private: -L${libdir} -lbiblesync @LIBS@
