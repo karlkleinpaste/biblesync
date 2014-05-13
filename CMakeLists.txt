@@ -22,14 +22,15 @@ SET(biblesync_headers            include/biblesync.hh
 # multiple products from this build process
 IF(BUILD_SHARED_LIBS)
     ADD_LIBRARY(biblesync SHARED ${biblesync_sources})
+    SET(SHAREDLIB_FALSE "#")
 ELSE(BUILD_SHARED_LIBS)
     ADD_LIBRARY(biblesync STATIC ${biblesync_sources})
+    SET(SHAREDLIB_TRUE "#")
 ENDIF(BUILD_SHARED_LIBS)
 
 # Set the default headers location
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/include")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/include")
-ADD_DEFINITIONS(-DBUILDING)
 
 # System defines
 IF(WIN32)
