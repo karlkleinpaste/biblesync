@@ -95,6 +95,8 @@ INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/soversion.cmake")
 # Set the variables in the .in file
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/include/biblesync-version.hh.in 
     ${CMAKE_CURRENT_BINARY_DIR}/include/biblesync-version.hh @ONLY)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/biblesync.pc.in 
+    ${CMAKE_CURRENT_BINARY_DIR}/biblesync.pc @ONLY)
 
 # Install both the library and its headers
 INSTALL(TARGETS biblesync
