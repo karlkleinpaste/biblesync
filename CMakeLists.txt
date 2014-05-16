@@ -2,7 +2,8 @@
 # - BUILD_SHARED_LIBS (default FALSE) - set to true to build shared libraries
 # - CMAKE_INSTALL_PREFIX (default "/usr/local") - set to directory where you want libs installed
 # - LIBDIR (default "CMAKE_INSTALL_PREFIX/lib") - set to directory where binaries should be installed
-# - INCLUDEDIR (default "CMAKE_INSTALL_PREFIX/include") - set to directory where header files should be installed to
+# - MANDIR (default "CMAKE_INSTALL_PREFIX/share/man/man7") - set to directory where manual pages should be installed
+# - INCLUDEDIR (default "CMAKE_INSTALL_PREFIX/include") - set to directory where header files should be installed
 # - BIBLESYNC_SOVERSION (defaults to BIBLESYNC_VERSION) - Manually set the SOVERSION of the installed file
 PROJECT(libbiblesync CXX)
 SET(BIBLESYNC_VERSION 1.0.0)
@@ -55,6 +56,8 @@ MESSAGE(STATUS "Will install to: ${PREFIX}")
 
 SET(LIBDIR "${PREFIX}/lib" CACHE STRING 
     "Object code library install directory. Defaults to CMAKE_INSTALL_PREFIX/lib")
+SET(MANDIR "${PREFIX}/share/man/man7" CACHE STRING 
+    "Manual page install directory. Defaults to CMAKE_INSTALL_PREFIX/share/man/man7")
 SET(INCLUDEDIR "${PREFIX}/include/biblesync" CACHE STRING 
     "Header library install directory. Defaults to CMAKE_INSTALL_PREFIX/include/biblecync")
 
@@ -107,3 +110,5 @@ INSTALL(FILES ${biblesync_headers}
     DESTINATION "${INCLUDEDIR}")
 INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/biblesync.pc"
     DESTINATION "${LIBDIR}/pkgconfig")
+INSTALL(FILES "${CMAKE_CURRENT_SOURCE_DIR}/biblesync.7"
+    DESTINATION "${MANDIR}")
