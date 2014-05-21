@@ -88,6 +88,8 @@ Public interface:
 .BI "static int BibleSync::Receive(void *" object ");"
 .br
 .BI "bool BibleSync::setPrivate(bool " privacy ");"
+.br
+.BI "void BibleSync::listenToSpeaker(bool " listen ", string " speakerkey ");"
 .fi
 .SH DESCRIPTION
 .I BibleSync
@@ -142,6 +144,27 @@ Thereafter, as appropriate to the operational mode selected, BibleSync is
 tasked with polled reception of incoming navigation event packets and
 transmission of navigation event packets on the user's part.
 
+.I BibleSync
+transmitters (Personal and Speaker modes) issue availability beacons every
+10 seconds.  These beacons provide for other
+.I BibleSync
+applications to maintain a managed list of available speakers.  Received
+beacons for previously-unknown speakers are handed up to the application.
+Furthermore, when a transmitter ceases to issue beacons, its presence in
+the list of available speakers is aged out until being removed after 30
+seconds of beacon silence.  The application is again informed when a
+speaker is removed.
+
+Default listening behavior is that the first Speaker heard via beacon is
+marked to be listened to.  Other transmitters claiming Speaker status are
+ignored, but their presence is made known to the application.  This
+provides for the application to maintain a list from which the user can
+select Speakers he wishes to synchronize his application.  It is useful
+for the application to provide blanket "listen to all" and "listen to
+none" functions, as well as per-Speaker selections, informing
+.I BibleSync
+of these choices.
+
 Synchronization events include 5 data elements: The Bible abbreviation;
 the verse reference; an alternate reference (if desired; not required)
 which may allow the application to interpret better based on variant
@@ -156,14 +179,14 @@ uses the synchronization group as an indicator of the tab number in its
 tabbed interface: Not only is the Bible navigated, but the tab in which to
 navigate is selected.
 
-The domain parameter is currently fixed as "BIBLE-VERSE".  It will be put
-to greater use in future revisions of the protocol.
+The domain parameter is currently fixed as "BIBLE-VERSE".  This will be
+put to greater use in future revisions of the protocol.
 
 .I BibleSync
 transmits no packet when the application leaves the conversation.
 
-Only the 2 packet types BSP_ANNOUNCE and BSP_SYNC are defined in the
-protocol.
+Only the 3 packet types BSP_ANNOUNCE, BSP_SYNC, and BSP_BEACON are defined
+in the protocol.
 .SH BIBLESYNC PUBLIC INTERFACE
 .SS Object creation
 The application must create a single BibleSync object, identifying the
@@ -206,8 +229,12 @@ single computer and does not want his navigation broadcast outside that
 single system, when in Personal mode, the application may also request
 privacy.  The effect is to set multicast TTL to zero, meaning that packets
 will not go out on the wire.
+.SS listenToSpeaker
+Aside from default listen behavior specified above, the application
+specifically asks to listen or not to listen to specific Speakers.  The
+key is as provided during the notification of a new Speaker.
 .SH RECEIVE USE CASES
-There are 4 values for the
+There are 6 values for the
 .I cmd
 parameter of the
 .I nav_func.
@@ -224,9 +251,9 @@ contains the user;
 .I ref
 contains the IP address;
 .I group
-contains the application name; and
+contains the application name and version; and
 .I domain
-contains the application version.
+contains the device identification.
 .SS 'N'
 Navigation.  The
 .I bible, ref, alt, group,
@@ -237,6 +264,16 @@ parameters are presented as they arrived.
 and
 .I dump
 are also available.
+.SS 'S'
+Speaker recognition from beacon receipt.
+.I alt
+holds a UUID key identifying the particular application.  Overloaded
+parameters are available as for presence announcements.
+.SS 'D'
+Dead speaker.
+.I alt
+holds the UUID key of a previously-identified application which is no
+longer a candidate for listening.
 .SS 'M'
 Mismatch.  The incoming event packet is mismatched, either against the
 current passphrase or for a navigation synchronization packet when

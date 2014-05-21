@@ -1,3 +1,7 @@
+2014-05-20  karl <charcoal@users.sf.net>
+
+	* Upgraded protocol for speaker beacon.
+
 2014-05-11  karl <charcoal@users.sf.net>
 
 	* Created BibleSync library as distinct entity.
