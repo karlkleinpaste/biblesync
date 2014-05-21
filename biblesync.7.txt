@@ -51,6 +51,7 @@ SYNOPSIS
                                          string group, string domain);
        static int BibleSync::Receive(void *object);
        bool BibleSync::setPrivate(bool privacy);
+       void BibleSync::listenToSpeaker(bool listen, string speakerkey);
 
 DESCRIPTION
        BibleSync  is  a  published protocol specification by which cooperating
@@ -98,6 +99,24 @@ BIBLESYNC ESSENTIALS
        is tasked with polled reception of incoming  navigation  event  packets
        and transmission of navigation event packets on the user's part.
 
+       BibleSync  transmitters (Personal and Speaker modes) issue availability
+       beacons every 10 seconds.  These beacons provide  for  other  BibleSync
+       applications   to  maintain  a  managed  list  of  available  speakers.
+       Received beacons for previously-unknown speakers are handed up  to  the
+       application.   Furthermore, when a transmitter ceases to issue beacons,
+       its presence in the list of available speakers is aged out until  being
+       removed  after  30 seconds of beacon silence.  The application is again
+       informed when a speaker is removed.
+
+       Default listening behavior is that the first Speaker heard  via  beacon
+       is  marked to be listened to.  Other transmitters claiming Speaker sta-
+       tus are ignored, but their presence is made known to  the  application.
+       This  provides  for  the  application to maintain a list from which the
+       user can select Speakers he wishes to synchronize his application.   It
+       is  useful  for  the application to provide blanket "listen to all" and
+       "listen to none" functions, as well as per-Speaker selections,  inform-
+       ing BibleSync of these choices.
+
        Synchronization events include 5 data elements: The Bible abbreviation;
        the verse reference; an alternate reference (if desired; not  required)
        which  may  allow  the application to interpret better based on variant
@@ -109,14 +128,14 @@ BIBLESYNC ESSENTIALS
        cator  of the tab number in its tabbed interface: Not only is the Bible
        navigated, but the tab in which to navigate is selected.
 
-       The domain parameter is currently fixed as "BIBLE-VERSE".  It  will  be
+       The domain parameter is currently fixed as "BIBLE-VERSE".  This will be
        put to greater use in future revisions of the protocol.
 
        BibleSync transmits no packet when the application leaves the conversa-
        tion.
 
-       Only the 2 packet types BSP_ANNOUNCE and BSP_SYNC are  defined  in  the
-       protocol.
+       Only the 3 packet types  BSP_ANNOUNCE,  BSP_SYNC,  and  BSP_BEACON  are
+       defined in the protocol.
 
 BIBLESYNC PUBLIC INTERFACE
    Object creation
@@ -164,8 +183,13 @@ BIBLESYNC PUBLIC INTERFACE
        privacy.   The  effect  is  to  set multicast TTL to zero, meaning that
        packets will not go out on the wire.
 
+   listenToSpeaker
+       Aside from default listen behavior  specified  above,  the  application
+       specifically asks to listen or not to listen to specific Speakers.  The
+       key is as provided during the notification of a new Speaker.
+
 RECEIVE USE CASES
-       There are 4 values for the cmd  parameter  of  the  nav_func.   In  all
+       There are 6 values for the cmd  parameter  of  the  nav_func.   In  all
        cases,  the  dump  parameter  provides  the  raw content of an arriving
        packet.
 
@@ -173,11 +197,21 @@ RECEIVE USE CASES
        Announce.  A general presence message is in  alt,  and  the  individual
        elements are also available, as overloaded use of the parameters: bible
        contains the user; ref contains the  IP  address;  group  contains  the
-       application name; and domain contains the application version.
+       application  name and version; and domain contains the device identifi-
+       cation.
 
    'N'
        Navigation.  The bible, ref, alt, group, and domain parameters are pre-
        sented as they arrived.  info and dump are also available.
+
+   'S'
+       Speaker  recognition from beacon receipt.  alt holds a UUID key identi-
+       fying the particular application.  Overloaded parameters are  available
+       as for presence announcements.
+
+   'D'
+       Dead speaker.  alt holds the UUID key of a previously-identified appli-
+       cation which is no longer a candidate for listening.
 
    'M'
        Mismatch.  The incoming event packet is mismatched, either against  the
