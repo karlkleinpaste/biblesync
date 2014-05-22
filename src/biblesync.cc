@@ -81,6 +81,10 @@ BibleSync::BibleSync(string a, string v, string u)
 #endif
 
     interface_addr.s_addr = htonl(0x7f000001);	// 127.0.0.1
+
+    // identify ourselves uniquely.
+    uuid_gen(uuid);
+    uuid_dump(uuid, uuid_string);
 }
 
 #define	BSP		(string)"BibleSync: "
@@ -256,10 +260,6 @@ string BibleSync::Setup()
 		// bind(2) leaves us ready for recvfrom(2) calls.
 	    }
 	}
-
-	// identify ourselves uniquely.
-	uuid_gen(uuid);
-	uuid_dump(uuid, uuid_string);
 
 	// now that we're alive, tell the network world that we're here.
 	if (retval == "")
