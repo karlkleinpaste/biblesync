@@ -539,9 +539,9 @@ int BibleSync::ReceiveInternal()
 
 			alt = BSP
 			    + content.find(BSP_APP_USER)->second
-			    + _("\npresent at [")
+			    + _(" present at [")
 			    + (string)inet_ntoa(source.sin_addr)
-			    + _("]\nusing ")
+			    + _("] using ")
 			    + group
 			    + ".";
 
@@ -771,8 +771,8 @@ BibleSync_xmit_status BibleSync::Transmit(char message_type,
 	retval = BSP_XMIT_FAILED;
 	(*nav_func)('E', EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 		    BSP + _("Transmit failed.\n"),
-		    _("Unable to multicast; BibleSync is now disabled.\n"
-		      "If your network connection changed while this program\n"
+		    _("Unable to multicast; BibleSync is now disabled. "
+		      "If your network connection changed while this program "
 		      "was active, it may be sufficient to re-enable."));
 	Shutdown();
     }
