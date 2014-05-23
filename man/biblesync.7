@@ -144,26 +144,29 @@ Thereafter, as appropriate to the operational mode selected, BibleSync is
 tasked with polled reception of incoming navigation event packets and
 transmission of navigation event packets on the user's part.
 
-.I BibleSync
-transmitters (Personal and Speaker modes) issue availability beacons every
-10 seconds.  These beacons provide for other
-.I BibleSync
-applications to maintain a managed list of available speakers.  Received
-beacons for previously-unknown speakers are handed up to the application.
+Transmitters (Personal and Speaker modes) issue availability beacons every
+10 seconds.  Received beacons for previously-unknown Speakers are handed
+up to the application.  These beacons provide for receivers (Personal and
+Audience modes) to maintain a managed list of available Speakers.
 Furthermore, when a transmitter ceases to issue beacons, its presence in
-the list of available speakers is aged out until being removed after 30
+the list of available Speakers is aged out until being removed after 30
 seconds of beacon silence.  The application is again informed when a
-speaker is removed.
+Speaker goes dead.
 
 Default listening behavior is that the first Speaker heard via beacon is
-marked to be listened to.  Other transmitters claiming Speaker status are
-ignored, but their presence is made known to the application.  This
-provides for the application to maintain a list from which the user can
-select Speakers he wishes to synchronize his application.  It is useful
-for the application to provide blanket "listen to all" and "listen to
-none" functions, as well as per-Speaker selections, informing
+marked for listening.  Other transmitters claiming Speaker status via
+beacon are initially ignored, but their presence is made known to the
+application.  This provides for the application to maintain a list from
+which the user can select Speakers he wishes to synchronize his
+application.  It is useful for the application to provide blanket "listen
+to all" and "listen to none" functions, as well as per-Speaker selections,
+informing
 .I BibleSync
-of these choices.
+of these choices.  In any case, this default "first Speaker only" policy
+can be overridden by the application with any other policy desired,
+through the use of
+.BI listenToSpeaker()
+as the application designer requires.
 
 Synchronization events include 5 data elements: The Bible abbreviation;
 the verse reference; an alternate reference (if desired; not required)
@@ -187,7 +190,7 @@ transmits no packet when the application leaves the conversation.
 
 Only the 3 packet types BSP_ANNOUNCE, BSP_SYNC, and BSP_BEACON are defined
 in the protocol.
-.SH BIBLESYNC PUBLIC INTERFACE
+.SH PUBLIC INTERFACE
 .SS Object creation
 The application must create a single BibleSync object, identifying the
 application's name, its version, and the user.
@@ -215,14 +218,18 @@ The application must provide the message type, which in the normal case
 should be
 .I BSP_SYNC.
 The protocol requires all the indicated parameters, but all have defaults
-in Transmit: KJV, Gen.1.1, empty alternate, 1, and BIBLE-VERSE.
+in
+.BI Transmit:
+KJV, Gen.1.1, empty alternate, 1, and BIBLE-VERSE.
 .SS Receive
-Receive is a static method accessible from either C or C++.  It must be
+This is a static method accessible from either C or C++.  It must be
 called with the object pointer so as to re-enter object context for the
-private internal receiver.  Receive must be called regularly (i.e. polled)
-as long as it continues to return TRUE.  When it returns FALSE, it means
-that the mode has changed to BSP_MODE_DISABLE, and the scheduled polling
-should stop.  See also the note below on polled reception.
+private internal receiver.
+.BI Receive()
+must be called regularly (i.e. polled) as long as it continues to return
+TRUE.  When it returns FALSE, it means that the mode has changed to
+BSP_MODE_DISABLE, and the scheduled polling should stop.  See also the
+note below on polled reception.
 .SS setPrivate
 In the circumstance where the user has multiple programs running on a
 single computer and does not want his navigation broadcast outside that
@@ -230,7 +237,7 @@ single system, when in Personal mode, the application may also request
 privacy.  The effect is to set multicast TTL to zero, meaning that packets
 will not go out on the wire.
 .SS listenToSpeaker
-Aside from default listen behavior specified above, the application
+Aside from default listen behavior detailed above, the application
 specifically asks to listen or not to listen to specific Speakers.  The
 key is as provided during the notification of a new Speaker.
 .SH RECEIVE USE CASES
@@ -265,12 +272,12 @@ and
 .I dump
 are also available.
 .SS 'S'
-Speaker recognition from beacon receipt.
+Speaker's initial recognition from beacon receipt.
 .I alt
 holds a UUID key identifying the particular application.  Overloaded
 parameters are available as for presence announcements.
 .SS 'D'
-Dead speaker.
+Dead Speaker.
 .I alt
 holds the UUID key of a previously-identified application which is no
 longer a candidate for listening.
@@ -307,7 +314,8 @@ incoming packets.  In
 which is built on GTK and GLib, this is readily provided by mechanisms
 like g_timeout_add(), which sets a regular interval call of the indicated
 function.  GLib will re-schedule the call as long as the called function
-returns TRUE.  When it returns FALSE, GLib un-schedules the call.  Receive
+returns TRUE.  When it returns FALSE, GLib un-schedules the call.
+.BI Receive()
 adheres to this straightforward convention.  Therefore, it is imperative
 that every time the application moves from disabled to any non-disabled
 mode, Receive is again scheduled for polled use.
@@ -323,6 +331,26 @@ in its current specification, and any packet sniffer such as wireshark(1)
 or tcpdump(8) can see the entire conversation.  The specification makes
 passing reference to future encryption, but at this time none is
 implemented.
+.SS Managed Speaker lists
+The addition of transmitter beacons was a result of initial experience
+showing that it can be too easy for a user to mis-start BibleSync, or for
+a malicious user to interject himself into serious work.  The goal of
+beacons is to provide a means by which, on the one hand, the user can be
+made aware of who is attempting to be a Speaker and, on the other hand,
+confine the set of Speakers whom the user will permit to make
+synchronization changes in the application.  The simplest use of 'S' new
+Speaker notification events is to respond with
+.BI "listenToSpeaker(" true ", " speakerkey ")"
+which in effect makes
+.I BibleSync
+behave as though there are no beacons.  More serious use of 'S'/'D' is for
+the application to manage its own sense of available Speakers, providing a
+means by which the user can make sensible selections about how to react to
+each Speaker's presence.
+.I BibleSync
+can be told to listen to legitimate Speakers, and to ignore interlopers,
+whether intended maliciously or merely due to other users' inadvertent
+behavior.
 .SS Protocol extensions
 This implementation takes certain liberties with the specification.  In
 light of this being the first functioning, published implementation of
@@ -338,7 +366,7 @@ particular character subset.  This implementation does not verify this.
 At this time, any non-NUL characters left of '=' are acceptable.
 
 Continuation lines in "name=value" pairs are defined by the specification,
-but this implementation does not support it.
+but this implementation does not support them.
 .SS Sending verse lists
 One of the better uses of
 .I BibleSync
