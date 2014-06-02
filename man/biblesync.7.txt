@@ -28,6 +28,7 @@ SYNOPSIS
 
        #define BSP_ANNOUNCE   1
        #define BSP_SYNC       2
+       #define BSP_BEACON     3
 
        typedef void (*BibleSync_navigate)(char cmd,
                                           string bible, string ref, string alt,
@@ -242,11 +243,11 @@ NOTES
        application moves from disabled to any non-disabled  mode,  Receive  is
        again scheduled for polled use.
 
-       A  1-  or 2-second poll interval is suggested.  Brief experience during
+       A  1-second  poll  interval  is  suggested.   Brief  experience  during
        development has shown that longer intervals lead  to  a  perception  of
        lag.
 
-       During every Receive call, all waiting packets are processed.
+       During every Receive() call, all waiting packets are processed.
 
    No datalink security
        BibleSync  is a protocol defined for a friendly environment.  It offers
@@ -315,4 +316,4 @@ SEE ALSO
 
 
 
-Linux                             2014-05-05                      BIBLESYNC(7)
+Linux                             2014-06-01                      BIBLESYNC(7)
