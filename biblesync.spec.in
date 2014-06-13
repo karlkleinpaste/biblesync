@@ -43,7 +43,6 @@ exit 0
 %postun -p /sbin/ldconfig
 
 %files
-%defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog LICENSE README WIRESHARK biblesync-v1.png
 %{_includedir}/biblesync
 %{_libdir}/libbiblesync*.so*
