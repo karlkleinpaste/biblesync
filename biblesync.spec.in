@@ -45,10 +45,10 @@ exit 0
 %files
 %defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog LICENSE README WIRESHARK biblesync-v1.png
-/usr/lib*/libbiblesync*.so*
-%{_mandir}/man7/biblesync.7
 %{_includedir}/biblesync
+%{_libdir}/libbiblesync*.so*
 %{_libdir}/pkgconfig/biblesync.pc
+%{_mandir}/man7/biblesync.7
 
 %changelog
 * Thu Jun 12 2014 Karl Kleinpaste <karl@kleinpaste.org>
