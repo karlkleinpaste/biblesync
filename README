@@ -2,46 +2,33 @@
 BibleSync
 ---------
 
-This is a C++ library encapsulating a protocol conduit.  The premise is
-that there is a local network over which to multicast Bible navigation.
-Someone, possibly several someones, will transmit, and others will
-receive.  The choices for when you decide to xmit and what to do when you
-recv are up to you as the application designer.
+This is a C++ single class library encapsulating a protocol conduit.  The
+premise is that there is a local network over which to multicast Bible
+navigation, and someone, possibly several someones, will transmit, and
+others will receive.  The choices for when you decide to xmit and what to
+do when you recv are up to you as the application designer.
 
 Access to the conduit is by creating the object, setting the mode, calling
 Transmit() to xmit nav events, and arranging the frequent polling of
-Receive() to recv nav events.  There is a programming reference
-biblesync.7 which explains the details, both from a high level view of the
-essentials of the protocol's behavior and at a low level of how you
-create, access, and use the conduit class.  The (single) BibleSync object
-should probably persist throughout the life of your application, but you
-can set the mode to "disable," and preferably stop the receive polling,
-at any time, and then re-enable it later as the user needs.
+Receive() to recv nav events.  There is more than just navigation to be
+handled; there are live/dead events for potential Speakers as well as
+mismatches, presence announcements, and errors.  There is a programming
+reference biblesync.7 which explains the details, both from a high level
+view of the essentials of the protocol's behavior and at a low level of
+how you create, access, and use the conduit class.  The (single) BibleSync
+object should persist throughout the life of your application, but at any
+time you can set the mode to "disable," and preferably stop the receive
+polling, and then re-enable it later as the user needs.
 
-It is useful to look at Xiphos' code, to see how this implementation is
-used in practice.  The easiest, most blunt way to look at code is to get
-Xiphos' source tree before and after integration of BibleSync, then
-diff(1) the trees.  There are a few incidental bugfixes in random areas,
-and Xiphos' manner of managing user choices via its Preferences dialog
-will be unrelated to your application's.  But the major changes to add
-object creation plus nav xmit/recv can be found this way.
-
-svn checkout -r4542 svn://svn.code.sf.net/p/gnomesword/code/trunk pre-BSP
-svn checkout -r4591 svn://svn.code.sf.net/p/gnomesword/code/trunk post-BSP
-diff -ru --exclude=.svn --exclude=po pre-BSP post-BSP
-
-The major areas of concern are in src/main/sword.cc, which has object
-creation, mode setting with start of polled Receive(), Transmit() on
-navigation, and handling of incoming packets.  Note that sword.cc also has
-a number of "jump routines," that is, simple functions usable to access
-the C++ class from the C that drives most of Xiphos' UI.  Also see sending
-verse lists in src/gnome2/sidebar.c (simple sidebar search) and
-src/gnome2/search_dialog.c (advanced search dialog), which devolves in
-both cases to chasing down the set of references as a combined string.
-Take note that canonical reference syntax is ensured before calling
-Transmit() by generating OSIS-compatible content.  User settings are
-handled in src/main/settings.[ch] and their manipulation is found in
-src/gnome/preferences_dialog.c.  This depends heavily on ui/prefs.glade.
+Much work has been done in integrating this library into its first
+application, Xiphos.  It is useful to examine Xiphos' code to see where
+and how integration has been done.  Get a Xiphos source tree using...
+    svn checkout svn://svn.code.sf.net/p/gnomesword/code/trunk xiphos
+...and see:
+- main/biblesync-glue.* for incoming event handling and "glue" routines.
+- main/sword.cc for initialization + how xmit is handled.
+- gnome2/search_dialog.c and gnome2/sidebar.c for verse list xmit.
+- gnome2/preferences_dialog.c and ui/prefs.glade for configuration UI.
 
 Karl Kleinpaste
 May 2014

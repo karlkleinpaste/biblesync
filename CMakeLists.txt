@@ -6,7 +6,7 @@
 # - INCLUDEDIR (default "CMAKE_INSTALL_PREFIX/include") - set to directory where header files should be installed
 # - BIBLESYNC_SOVERSION (defaults to BIBLESYNC_VERSION) - Manually set the SOVERSION of the installed file
 PROJECT(libbiblesync CXX)
-SET(BIBLESYNC_VERSION 1.0.1)
+SET(BIBLESYNC_VERSION 1.0.2)
 # A required CMake line
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 # Where our custom Find* files are located
@@ -100,6 +100,8 @@ INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/soversion.cmake")
 # Set the variables in the .in file
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/include/biblesync-version.hh.in 
     ${CMAKE_CURRENT_BINARY_DIR}/include/biblesync-version.hh @ONLY)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/biblesync.spec.in 
+    ${CMAKE_CURRENT_BINARY_DIR}/biblesync.spec @ONLY)
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/biblesync.pc.in 
     ${CMAKE_CURRENT_BINARY_DIR}/biblesync.pc @ONLY)
 
