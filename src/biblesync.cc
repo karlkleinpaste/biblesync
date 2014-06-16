@@ -610,21 +610,21 @@ int BibleSync::ReceiveInternal()
 			    }
 			    else
 			    {
-				// default behavior for new speakers:
+				// new speaker?
+				// record address for first-time-seen beacon,
+				// for anti-spoof checks in the future.
 				// listen to 1st speaker, ignore everyone else.
 				// the app can make other choices.
-				// also, record address for first-time-seen
-				// for anti-spoof checks in the future.
-				if ((old_speakers_size == 0) &&
-				    (new_speakers_size == 1))
+
+				if (old_speakers_size != new_speakers_size)
 				{
-				    speakers[pkt_uuid].listen = true;
+				    // it's a new speaker.  save address.
 				    speakers[pkt_uuid].addr = source_addr;
-				}
-				else if (old_speakers_size != new_speakers_size)
-				{
-				    speakers[pkt_uuid].listen = false;
-				    speakers[pkt_uuid].addr = source_addr;
+
+				    // iff he's the 1st speaker, listen to him.
+				    speakers[pkt_uuid].listen =
+					((old_speakers_size == 0) &&
+					 (new_speakers_size == 1));
 				}
 				// else someone previously known: don't touch.
 			    }
