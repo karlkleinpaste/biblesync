@@ -14,7 +14,7 @@
 .ad l
 .in 0
 Network Working Group                                  C. Stergiou et al
-Request for Comments: -none-                                BibleSync WG
+Request for Comments: -BSP-                                 BibleSync WG
                                                             15 June 2014
 
 
@@ -46,7 +46,7 @@ packets from other users.  The protocol sends reference indicators, not
 content.
 
 .ti 0
-Operational modes
+Operational Modes
 
 BibleSync defines three modes: Personal, Speaker, and Audience.  In
 Personal mode, the application both sends and listens to navigation.  In
@@ -55,19 +55,19 @@ Audience mode, the application listens but does not send.  Speaker and
 Audience modes are each in effect half of Personal mode.
 
 .ti 0
-Network addressing
+Network Addressing
 
 Multicast address 239.225.27.227 is used with UDP port 22272.  Typical TTL
 of 1, default in most systems, is used in the normal case.  In the special
-case of strictly personal usage by one user with more than application on
-a single host, a privacy mode is available by setting multicast TTL to 0,
-so the user's entirely internal navigation is not also heard over the
+case of strictly personal usage by one user with more than one application
+on a single host, a privacy mode is available by setting multicast TTL to
+0, so the user's entirely internal navigation is not also heard over the
 wire.
 
 
 
 .ti 0
-Packet structure
+Packet Structure
 
 Payload maximum length is 1280 bytes.  Within this, the first 32 bytes are
 a header identifying the sender's protocol version, message type, and
@@ -111,7 +111,7 @@ Packet maximum size (1.25 Kbytes) was chosen on the basis of staying
 within one MSS on a typical Ethernet.
 
 .ti 0
-Packet type overview
+Packet Type Overview
 
 The presence packet announces the application's participation in the
 conversation.  It is non-essential, but useful if the application designer
@@ -130,7 +130,7 @@ for having message type 3, and is sent by transmitting applications every
 10 seconds.
 
 .ti 0
-Speaker beacons
+Speaker Beacons
 
 An exclusion mechanism was deemed necessary during early experimentation
 with the first implementation that provided only presence announcement and
@@ -162,15 +162,15 @@ it.  The user must be able to consult a list of potential speakers and
 pick the one(s) actually needed.
 
 Beacons must be sent at least every 10 seconds.  Receivers must track
-speaker beacons, aging them toward removal.  Each new beacon for a speaker
-restarts its aging countdown.  A potential speaker that has gone
+speaker beacons, aging speakers toward removal.  Each new beacon for a
+speaker restarts its aging countdown.  A potential speaker that has gone
 beacon-silent for 30 seconds is considered a dead speaker and is removed
 from the list of available speakers.
 
 Navigation synchronization received without beacon support is ignored.
 
 .ti 0
-Name/value pairs
+Name/value Pairs
 
 Names may be constructed from any characters other than '=', newline, and
 NUL.  Values may be constructed from any characters other than newline and
@@ -248,7 +248,8 @@ In general, multiple references can be specified using ';' to separate
 complete references, ',' to separate individual verses, and '-' to
 identify a verse or chapter range.  The application designer must remain
 aware that the packet size limit means that at most a few dozen references
-will fit.
+will fit.  A receiving application should present a multiple reference to
+the user as a selection list without navigating directly to any of them.
 
 .in 3
 10. msg.sync.altVerse
@@ -276,22 +277,32 @@ may ignore it on navigation receipt if such values have no meaning.
 Required in navigation.  This field has a fixed value of "BIBLE-VERSE" but
 its use will be expanded in future revisions.
 
+
 .in 3
 .ti 0
 Security Considerations
 
 BibleSync is a protocol defined for a friendly environment.  It transmits
-content in cleartext with no anticipation of encrypted content, and any
-packet sniffer can see what is going on, including the passphrase (that
-being nothing more than a conversation discriminant).  The protocol
-provides protection only against the potential for the confused or
-malicious speaker application through the use of beacons.
+cleartext with no anticipation of encrypted content, and any packet
+sniffer can see what is going on, including the passphrase (that being
+nothing more than a conversation discriminant).
+
+Spoofing must be defended against.  That is, the identity of a speaker is
+visible to all, and a malicious user can generate artificial packets which
+appear to be from someone else, thereby possibly impersonating a
+legitimate speaker and inducing others' applications to navigate
+inappropriately.  The application should retain enough information from
+the first beacon received from each speaker so that subsequent packets can
+be verified.  Specifically, the application should check that the UUID of
+a packet is coming from the same IP address from which the speaker was
+first heard.
 
 .ti 0
-Example packets
+Example Packets
 
 .nf
 Presence announcement:
+
     magic: 0x409caf11
     version: 0x02
     type: 0x01
@@ -306,6 +317,7 @@ Presence announcement:
 Beacon is identical to presence announcement except for being type 3.
 
 Navigation:
+
     magic: 0x409caf11
     version: 0x02
     type: 0x02
@@ -322,12 +334,14 @@ Navigation:
     msg.sync.verse=Rom.14.4
 
 Additional name/value examples, optional use:
+
     app.version=2.7a
     app.os=Linux
     app.device=i686
     msg.sync.altVerse=1Mac.1.2
 
 Real-world example, using all defined names:
+
     magic: 0x409caf11
     version: 0x02
     type: 0x02 (sync)
