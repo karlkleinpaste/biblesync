@@ -1,57 +1,81 @@
-%define		version		@BIBLESYNC_VERSION@
 Name:		biblesync
-Version:	%{version}
-Summary:	BibleSync: Bible software multicast co-navigation
+Version:	@BIBLESYNC_VERSION@
 Release:	1xi%{?dist}
-License:	public domain
-Packager:	Karl Kleinpaste
-URL:		https://github.com/karlkleinpaste/biblesync
-Source:		http://sourceforge.net/projects/gnomesword/files/BibleSync/%{version}/biblesync-%{version}.tar.gz
+Summary:	A Cross-platform library for sharing Bible navigation
+
 Group:		System Environment/Libraries
+License:	Public Domain
+URL:		http://www.xiphos.org
+Source0:	http://downloads.sourceforge.net/gnomesword/biblesync-%{version}.tar.gz
+
 BuildRequires:	intltool
 BuildRequires:	libuuid-devel
-Requires:	libuuid
-%define		debug_package	%{nil}
+BuildRequires:	cmake
 
 %description
-BibleSync is a multicast protocol to support Bible software shared co-navigation.
-It uses LAN multicast in either a personal/small team mutual navigation motif or
-in a classroom environment where there are Speakers plus the Audience.
-It provides a complete yet minimal public interface to support mode setting,
-setup for packet reception, transmit on local navigation, and handling of incoming
-packets.
-This library is not specific to any particular Bible software framework, completely
-agnostic as to structure of layers above BibleSync.
-This build produced by Xiphos development; not from official Fedora repo.
+BibleSync is a multicast protocol to support Bible software shared co-
+navigation. It uses LAN multicast in either a personal/small team mutual
+navigation motif or in a classroom environment where there are Speakers plus
+the Audience. It provides a complete yet minimal public interface to support
+mode setting, setup for packet reception, transmit on local navigation, and
+handling of incoming packets.
+
+This library is not specific to any particular Bible software framework,
+completely agnostic as to structure of layers above BibleSync.
+
+%package devel
+Summary:	Development files for %{name}
+Requires:	%{name}%{?_isa} = %{version}-%{release}
+Requires:	libuuid-devel%{?_isa}
+
+%description devel
+This package contains libraries and header files for developing applications
+that use %{name}.
 
 %prep
 %setup -q
 
+
 %build
 mkdir build
-cd build
-cmake -DBUILD_SHARED_LIBS=TRUE -DCMAKE_INSTALL_PREFIX=/usr -DLIBDIR=%{_libdir} ..
-make
+pushd build
+%cmake -DLIBDIR=%{_libdir} .. -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--as-needed"
+make %{?_smp_mflags}
+popd
+
 
 %install
-cd build
-make install DESTDIR="$RPM_BUILD_ROOT"
-exit 0
+pushd build
+make install DESTDIR=%{buildroot}
+popd
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
 %files
-%doc AUTHORS COPYING ChangeLog LICENSE README WIRESHARK biblesync-v1.png
+%doc LICENSE
+%{_libdir}/libbiblesync.so.%{version}
+
+%files devel
+%doc AUTHORS COPYING ChangeLog README WIRESHARK
 %{_includedir}/biblesync
-%{_libdir}/libbiblesync*.so*
 %{_libdir}/pkgconfig/biblesync.pc
-%{_mandir}/man7/biblesync.7
+%{_libdir}/libbiblesync.so
+%{_mandir}/man7/biblesync.7*
 
 %changelog
-* Thu Jun 12 2014 Karl Kleinpaste <karl@kleinpaste.org>
+* Mon Aug 04 2014 Greg Hellings <greg.hellings@gmail.com> - 1.0.2-4
+- Final import form
+
+* Sat Jul 19 2014 Greg Hellings <greg.hellings@gmail.com> - 1.0.2-3
+- Package review feedback
+
+* Mon Jul 07 2014 Greg Hellings <greg.hellings@gmail.com> - 1.0.2-2
+- Initial build
+
+* Thu Jun 12 2014 Karl Kleinpaste <karl@kleinpaste.org> - 1.0.2-1
 - Update 1.0.2 and make .spec work for the 1st time.
 
-* Sun May 11 2014 Karl Kleinpaste <karl@kleinpaste.org>
+* Sun May 11 2014 Karl Kleinpaste <karl@kleinpaste.org> - 1.0.0
 - Version 1.0.0
