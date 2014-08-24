@@ -5,7 +5,7 @@ Summary:	A Cross-platform library for sharing Bible navigation
 
 Group:		System Environment/Libraries
 License:	Public Domain
-URL:		http://www.xiphos.org
+URL:		https://github.com/karlkleinpaste/biblesync
 Source0:	http://downloads.sourceforge.net/gnomesword/biblesync-%{version}.tar.gz
 
 BuildRequires:	intltool
