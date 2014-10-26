@@ -53,7 +53,7 @@ biblesync \- multicast navigation synchronization in Bible programs
 .br
 .BI "#define BSP_BEACON     3"
 .sp
-.BI "typedef void (*BibleSync_navigate)(char " cmd ","
+.BI "typedef void (*BibleSync_navigate)(char " cmd ", string " speakerkey ","
 .br
 .BI "                                   string " bible ", string " ref ", string " alt ","
 .br
@@ -274,13 +274,11 @@ and
 .I dump
 are also available.
 .SS 'S'
-Speaker's initial recognition from beacon receipt.
-.I alt
-holds a UUID key identifying the particular application.  Overloaded
-parameters are available as for presence announcements.
+Speaker's initial recognition from beacon receipt.  Overloaded parameters
+are available as for presence announcements.
 .SS 'D'
 Dead Speaker.
-.I alt
+.I speakerkey
 holds the UUID key of a previously-identified application which is no
 longer a candidate for listening.
 .SS 'M'
@@ -322,8 +320,8 @@ adheres to this straightforward convention.  Therefore, it is imperative
 that every time the application moves from disabled to any non-disabled
 mode, Receive is again scheduled for polled use.
 
-A 1-second poll interval is suggested.  Brief experience during
-development has shown that longer intervals lead to a perception of lag.
+A 1-second poll interval is expected.  Brief experience during development
+has shown that longer intervals lead to a perception of lag.
 
 During every
 .BI Receive()
@@ -355,22 +353,6 @@ each Speaker's presence.
 can be told to listen to legitimate Speakers, and to ignore interlopers,
 whether intended maliciously or merely due to other users' inadvertent
 behavior.
-.SS Protocol extensions
-This implementation takes certain liberties with the specification.  In
-light of this being the first functioning, published implementation of
-.I BibleSync,
-these changes are intended to be reflected in a near-future specification
-update.
-.SS Conformity checks
-This implementation does not guarantee conformity of incoming packets in 2
-areas:
-
-The names in the "name=value" pairs are expected to be composed from a
-particular character subset.  This implementation does not verify this.
-At this time, any non-NUL characters left of '=' are acceptable.
-
-Continuation lines in "name=value" pairs are defined by the specification,
-but this implementation does not support them.
 .SS Sending verse lists
 One of the better uses of
 .I BibleSync

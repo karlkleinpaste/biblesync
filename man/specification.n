@@ -249,7 +249,7 @@ complete references, ',' to separate individual verses, and '-' to
 identify a verse or chapter range.  The application designer must remain
 aware that the packet size limit means that at most a few dozen references
 will fit.  A receiving application should present a multiple reference to
-the user as a selection list without navigating directly to any of them.
+the user as a selection list without navigating.
 
 .in 3
 10. msg.sync.altVerse
