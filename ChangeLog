@@ -1,6 +1,15 @@
+2014-10-31  karl <charcoal@users.sf.net>
+
+	* Anti-spoof: xmit 1st beacon before presence announcement (1.1.1).
+	* Spoof downgraded from error to mismatch.
+
+2014-10-26  karl <charcoal@users.sf.net>
+
+	* Upgraded speakerkey UUID as 1st class parameter in nav_func (1.1.0).
+
 2014-05-20  karl <charcoal@users.sf.net>
 
-	* Upgraded protocol for speaker beacon.
+	* Upgraded protocol for speaker beacon (1.0.2).
 
 2014-05-11  karl <charcoal@users.sf.net>
 

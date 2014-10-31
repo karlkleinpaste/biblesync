@@ -65,6 +65,12 @@ popd
 %{_mandir}/man7/biblesync.7*
 
 %changelog
+* Fri Oct 31 2014 Karl Kleinpaste <karl@kleinpaste.org> - 1.1.1-1
+- Anti-spoof improvements.
+
+* Sun Oct 26 2014 Karl Kleinpaste <karl@kleinpaste.org> - 1.1.0-1
+- Speakerkey becomes 1st class arg in nav_func.
+
 * Mon Aug 04 2014 Greg Hellings <greg.hellings@gmail.com> - 1.0.2-4
 - Final import form
 

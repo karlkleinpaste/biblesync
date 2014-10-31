@@ -295,7 +295,12 @@ inappropriately.  The application should retain enough information from
 the first beacon received from each speaker so that subsequent packets can
 be verified.  Specifically, the application should check that the UUID of
 a packet is coming from the same IP address from which the speaker was
-first heard.
+first heard.  It is important that the first beacon be transmitted before
+the presence announcement, because both contain the UUID, and an
+interloper could begin to impersonate the legitimate speaker via contrived
+beacons and navigation before the legitimate speaker himself begins to
+transmit his own.  The UUID's presence in the 1st beacon packet prevents
+interlopers from being able to do this.
 
 .ti 0
 Example Packets

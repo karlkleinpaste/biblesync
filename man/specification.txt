@@ -4,438 +4,444 @@
 
 
 
-Network Working Group                                  C. Stergiou et al
-Request for Comments: ‐BSP‐                                 BibleSync WG
-                                                            15 June 2014
+    Network Working Group                                  C. Stergiou et al
+    Request for Comments: -BSP-                                 BibleSync WG
+                                                                15 June 2014
 
 
-      A Standard for Synchronized Co‐Navigation of Bible Programs
+          A Standard for Synchronized Co-Navigation of Bible Programs
 
-Status of this Memo
+    Status of this Memo
 
-   This memo describes a protocol by which cooperating Bible programs
-   with LAN access use multicast navigation packets to share navigation
-   of programs.  This is a standard recommended for interoperation in
-   any network‐aware Bible program.  Distribution of this memo is
-   unlimited.
+       This memo describes a protocol by which cooperating Bible programs
+       with LAN access use multicast navigation packets to share navigation
+       of programs.  This is a standard recommended for interoperation in
+       any network-aware Bible program.  Distribution of this memo is
+       unlimited.
 
-Overview and Rationale
+    Overview and Rationale
 
-   Use of multiple Bible applications is common and requires repeated
-   operations in order to remain synchronized among the applications
-   used.  Scenarios for this use include a single user working with more
-   than one application, possibly on more than one computer; a small
-   group working together; or a classroom environment where a set of
-   speakers has an audience who follow the speakers’ direction.
-   BibleSync provides a means by which network‐aware applications can
-   provide navigation packets when the user moves his Bible to a new
-   reference, and receive navigation packets from other users.  The
-   protocol sends reference indicators, not content.
+       Use of multiple Bible applications is common and requires repeated
+       operations in order to remain synchronized among the applications
+       used.  Scenarios for this use include a single user working with more
+       than one application, possibly on more than one computer; a small
+       group working together; or a classroom environment where a set of
+       speakers has an audience who follow the speakers’ direction.
+       BibleSync provides a means by which network-aware applications can
+       provide navigation packets when the user moves his Bible to a new
+       reference, and receive navigation packets from other users.  The
+       protocol sends reference indicators, not content.
 
-Operational Modes
+    Operational Modes
 
-   BibleSync defines three modes: Personal, Speaker, and Audience.  In
-   Personal mode, the application both sends and listens to navigation.
-   In Speaker mode, the application sends but does not listen, and
-   conversely in Audience mode, the application listens but does not
-   send.  Speaker and Audience modes are each in effect half of Personal
-   mode.
+       BibleSync defines three modes: Personal, Speaker, and Audience.  In
+       Personal mode, the application both sends and listens to navigation.
+       In Speaker mode, the application sends but does not listen, and
+       conversely in Audience mode, the application listens but does not
+       send.  Speaker and Audience modes are each in effect half of Personal
+       mode.
 
-Network Addressing
+    Network Addressing
 
-   Multicast address 239.225.27.227 is used with UDP port 22272.
-   Typical TTL of 1, default in most systems, is used in the normal
-   case.  In the special case of strictly personal usage by one user
-   with more than one application on a single host, a privacy mode is
-   available by setting multicast TTL to 0, so the user’s entirely
-   internal navigation is not also heard over the wire.
+       Multicast address 239.225.27.227 is used with UDP port 22272.
+       Typical TTL of 1, default in most systems, is used in the normal
+       case.  In the special case of strictly personal usage by one user
+       with more than one application on a single host, a privacy mode is
+       available by setting multicast TTL to 0, so the user’s entirely
+       internal navigation is not also heard over the wire.
 
 
 
 
 
 
-Stergiou et al                                                 [Page 1]
+    Stergiou et al                                                 [Page 1]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-Packet Structure
+    Packet Structure
 
-   Payload maximum length is 1280 bytes.  Within this, the first 32
-   bytes are a header identifying the sender’s protocol version, message
-   type, and UUID, and the remaining space consists of name/value pairs,
-   within which a number of the names are required for each of the
-   defined message types.  In C++, the complete structure is represented
-   below, with field details following:
+       Payload maximum length is 1280 bytes.  Within this, the first 32
+       bytes are a header identifying the sender’s protocol version, message
+       type, and UUID, and the remaining space consists of name/value pairs,
+       within which a number of the names are required for each of the
+       defined message types.  In C++, the complete structure is represented
+       below, with field details following:
 
-       typedef struct {
-           uint32_t  magic;        // 4 bytes
-           uint8_t   version;      // 1 byte
-           uint8_t   msg_type;     // 1 byte
-           uint16_t  num_packets;  // 2 bytes
-           uint16_t  index_packet; // 2 bytes
-           uint8_t   reserved[6];  // 6 bytes
-           uuid_t    uuid;         // 16 bytes
-           char      body[1248];
-       } BibleSyncMessage;
+           typedef struct {
+               uint32_t  magic;        // 4 bytes
+               uint8_t   version;      // 1 byte
+               uint8_t   msg_type;     // 1 byte
+               uint16_t  num_packets;  // 2 bytes
+               uint16_t  index_packet; // 2 bytes
+               uint8_t   reserved[6];  // 6 bytes
+               uuid_t    uuid;         // 16 bytes
+               char      body[1248];
+           } BibleSyncMessage;
 
-   The magic value is 0x409CAF11, by which to determine that a packet is
-   intended for BibleSync.
+       The magic value is 0x409CAF11, by which to determine that a packet is
+       intended for BibleSync.
 
-   The protocol version is 2.
+       The protocol version is 2.
 
-   Three message types are defined: 1 = presence announcement, 2 =
-   navigation synchronization, 3 = speaker availability beacon.
+       Three message types are defined: 1 = presence announcement, 2 =
+       navigation synchronization, 3 = speaker availability beacon.
 
-   Currently BibleSync is specified as a single packet protocol, but the
-   number of packets and packet index fields are included for possible
-   future expansion.  At this time, number of packets must be 1 and
-   packet index must be 0.
+       Currently BibleSync is specified as a single packet protocol, but the
+       number of packets and packet index fields are included for possible
+       future expansion.  At this time, number of packets must be 1 and
+       packet index must be 0.
 
-   The application provides a UUID (see RFC 4122).  The UUID is
-   consistent through the life of the application, i.e., it is generated
-   once when BibleSync first begins to be used, and that value is not
-   re‐generated as long as the application runs.
+       The application provides a UUID (see RFC 4122).  The UUID is
+       consistent through the life of the application, i.e., it is generated
+       once when BibleSync first begins to be used, and that value is not
+       re-generated as long as the application runs.
 
-   Six bytes are reserved for possible future definition.
+       Six bytes are reserved for possible future definition.
 
-   Packet maximum size (1.25 Kbytes) was chosen on the basis of staying
-   within one MSS on a typical Ethernet.
+       Packet maximum size (1.25 Kbytes) was chosen on the basis of staying
+       within one MSS on a typical Ethernet.
 
-Packet Type Overview
+    Packet Type Overview
 
-   The presence packet announces the application’s participation in the
-   conversation.  It is non‐essential, but useful if the application
-   designer chooses to make it visible to the user.
+       The presence packet announces the application’s participation in the
+       conversation.  It is non-essential, but useful if the application
+       designer chooses to make it visible to the user.
 
 
 
-Stergiou et al                                                 [Page 2]
+    Stergiou et al                                                 [Page 2]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-   The navigation packet specifies a Bible name and a reference.  It may
-   also contain an alternate reference to provide a second means of
-   interpretation so that e.g. differing Bible versifications might be
-   accommodated.  An application sends navigation synchronization when
-   the user navigates the application to a new reference point.  A
-   listening application receives the reference information and
-   navigates there without needing user interaction.
+       The navigation packet specifies a Bible name and a reference.  It may
+       also contain an alternate reference to provide a second means of
+       interpretation so that e.g. differing Bible versifications might be
+       accommodated.  An application sends navigation synchronization when
+       the user navigates the application to a new reference point.  A
+       listening application receives the reference information and
+       navigates there without needing user interaction.
 
-   The speaker beacon packet is identical to the presence announcement
-   except for having message type 3, and is sent by transmitting
-   applications every 10 seconds.
+       The speaker beacon packet is identical to the presence announcement
+       except for having message type 3, and is sent by transmitting
+       applications every 10 seconds.
 
-Speaker Beacons
+    Speaker Beacons
 
-   An exclusion mechanism was deemed necessary during early
-   experimentation with the first implementation that provided only
-   presence announcement and navigation synchronization.  It was found
-   to be too easy for a confused or malicious user to mis‐start
-   BibleSync in his application in Personal or Speaker mode and thereby
-   to navigate other users’ applications inappropriately, because all
-   claims to speaker status were implicitly accepted by the mere arrival
-   of navigation packets.
+       An exclusion mechanism was deemed necessary during early
+       experimentation with the first implementation that provided only
+       presence announcement and navigation synchronization.  It was found
+       to be too easy for a confused or malicious user to mis-start
+       BibleSync in his application in Personal or Speaker mode and thereby
+       to navigate other users’ applications inappropriately, because all
+       claims to speaker status were implicitly accepted by the mere arrival
+       of navigation packets.
 
-   Beacons provide this exclusion, by which senders (Personal or Speaker
-   mode) advertise their availability to be listened to by receivers
-   (Personal or Audience mode).  It is up to the application designer to
-   implement an appropriate listen policy, for which the default should
-   be that the first beacon‐recognized speaker is automatically listened
-   to, and subsequent beacons are recognized as potential speakers but
-   are ignored.  This handles the usual good case where, in a classroom
-   setting, a single application in Speaker mode correctly identifies
-   itself and all other participating applications in Audience mode need
-   to listen to that speaker.  Another application subsequently claiming
-   speaker status is operating in error, and is to be ignored.
+       Beacons provide this exclusion, by which senders (Personal or Speaker
+       mode) advertise their availability to be listened to by receivers
+       (Personal or Audience mode).  It is up to the application designer to
+       implement an appropriate listen policy, for which the default should
+       be that the first beacon-recognized speaker is automatically listened
+       to, and subsequent beacons are recognized as potential speakers but
+       are ignored.  This handles the usual good case where, in a classroom
+       setting, a single application in Speaker mode correctly identifies
+       itself and all other participating applications in Audience mode need
+       to listen to that speaker.  Another application subsequently claiming
+       speaker status is operating in error, and is to be ignored.
 
-   The application must provide a means by which error or malice on the
-   part of potential speakers is managed, that is, by which the user can
-   choose which potential speakers should be heard and which should be
-   ignored.  For example, if a proper speaker and an interloper are both
-   claiming speaker status by sending beacons, and a newly‐started
-   application begins to listen, it may first hear the interloper’s
-   beacon and begin listening to it.  The user must be able to consult a
-   list of potential speakers and pick the one(s) actually needed.
+       The application must provide a means by which error or malice on the
+       part of potential speakers is managed, that is, by which the user can
+       choose which potential speakers should be heard and which should be
+       ignored.  For example, if a proper speaker and an interloper are both
+       claiming speaker status by sending beacons, and a newly-started
+       application begins to listen, it may first hear the interloper’s
+       beacon and begin listening to it.  The user must be able to consult a
+       list of potential speakers and pick the one(s) actually needed.
 
-   Beacons must be sent at least every 10 seconds.  Receivers must track
-   speaker beacons, aging speakers toward removal.  Each new beacon for
-   a speaker restarts its aging countdown.  A potential speaker that has
-   gone beacon‐silent for 30 seconds is considered a dead speaker and is
+       Beacons must be sent at least every 10 seconds.  Receivers must track
+       speaker beacons, aging speakers toward removal.  Each new beacon for
+       a speaker restarts its aging countdown.  A potential speaker that has
+       gone beacon-silent for 30 seconds is considered a dead speaker and is
 
 
 
-Stergiou et al                                                 [Page 3]
+    Stergiou et al                                                 [Page 3]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-   removed from the list of available speakers.
+       removed from the list of available speakers.
 
-   Navigation synchronization received without beacon support is
-   ignored.
+       Navigation synchronization received without beacon support is
+       ignored.
 
-Name/value Pairs
+    Name/value Pairs
 
-   Names may be constructed from any characters other than ’=’, newline,
-   and NUL.  Values may be constructed from any characters other than
-   newline and NUL.
+       Names may be constructed from any characters other than ’=’, newline,
+       and NUL.  Values may be constructed from any characters other than
+       newline and NUL.
 
-   Name/value pairs are newline‐terminated, not newline‐separated.  The
-   distinction means that the last pair also must end in a newline.
+       Name/value pairs are newline-terminated, not newline-separated.  The
+       distinction means that the last pair also must end in a newline.
 
-   Continuation lines are not supported.
+       Continuation lines are not supported.
 
-   There are 12 names defined for use in the body.  The application may
-   provide any others its designer finds useful, but these names define
-   the protocol’s interoperability.
+       There are 12 names defined for use in the body.  The application may
+       provide any others its designer finds useful, but these names define
+       the protocol’s interoperability.
 
-    1. msg.sync.passPhrase
+        1. msg.sync.passPhrase
 
-       Required.  A free‐form phrase to separate distinct BibleSync
-       conversations.  This allows e.g. multiple Bible classes to be
-       taught without mutual interference.  A packet not matching the
-       receiver’s passphrase is ignored.
+           Required.  A free-form phrase to separate distinct BibleSync
+           conversations.  This allows e.g. multiple Bible classes to be
+           taught without mutual interference.  A packet not matching the
+           receiver’s passphrase is ignored.
 
-    2. app.inst.uuid
+        2. app.inst.uuid
 
-       Required.  The application’s UUID, repeated in printable form.
+           Required.  The application’s UUID, repeated in printable form.
 
-    3. app.user
+        3. app.user
 
-       Required.  Identification of the human user.
+           Required.  Identification of the human user.
 
-    4. app.name
+        4. app.name
 
-       Required.  Identification of the application.
+           Required.  Identification of the application.
 
-    5. app.version
+        5. app.version
 
-       Optional; recommended.  The application’s version stamp.
+           Optional; recommended.  The application’s version stamp.
 
-    6. app.os
+        6. app.os
 
-       Optional.  Identification of the OS under which the application
-       runs.
+           Optional.  Identification of the OS under which the application
+           runs.
 
 
 
 
-Stergiou et al                                                 [Page 4]
+    Stergiou et al                                                 [Page 4]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-    7. app.device
+        7. app.device
 
-       Optional.  Identification of the application’s device (hardware).
+           Optional.  Identification of the application’s device (hardware).
 
-    8. msg.sync.bibleAbbrev
+        8. msg.sync.bibleAbbrev
 
-       Required in navigation.  The short textual name of the Bible
-       (e.g. "KJV").
+           Required in navigation.  The short textual name of the Bible
+           (e.g. "KJV").
 
-    9. msg.sync.verse
+        9. msg.sync.verse
 
-       Required in navigation.  A textual Bible reference.  It is the
-       application’s responsibility to use appropriate reference syntax;
-       see references below for OSIS and BibleRef.  This value may not
-       be just a single reference, that is, it may be a multiple
-       reference generated as a search result or a cross‐reference
-       footnote in the sender’s application.  In general, multiple
-       references can be specified using ’;’ to separate complete
-       references, ’,’ to separate individual verses, and ’‐’ to
-       identify a verse or chapter range.  The application designer must
-       remain aware that the packet size limit means that at most a few
-       dozen references will fit.  A receiving application should
-       present a multiple reference to the user as a selection list
-       without navigating directly to any of them.
+           Required in navigation.  A textual Bible reference.  It is the
+           application’s responsibility to use appropriate reference syntax;
+           see references below for OSIS and BibleRef.  This value may not
+           be just a single reference, that is, it may be a multiple
+           reference generated as a search result or a cross-reference
+           footnote in the sender’s application.  In general, multiple
+           references can be specified using ’;’ to separate complete
+           references, ’,’ to separate individual verses, and ’-’ to
+           identify a verse or chapter range.  The application designer must
+           remain aware that the packet size limit means that at most a few
+           dozen references will fit.  A receiving application should
+           present a multiple reference to the user as a selection list
+           without navigating.
 
-   10. msg.sync.altVerse
+       10. msg.sync.altVerse
 
-       Optional.  Another textual Bible reference, used as a possible
-       assist to applications that might not parse the primary reference
-       in msg.sync.verse.
+           Optional.  Another textual Bible reference, used as a possible
+           assist to applications that might not parse the primary reference
+           in msg.sync.verse.
 
-   11. msg.sync.group
+       11. msg.sync.group
 
-       Required in navigation.  A synchronization group number, a single
-       ASCII digit, ’1’ through ’9’, the interpretation of which is left
-       to the application.  This may be used to identify a related group
-       of windows displayed by the application, or a tab number within a
-       tabbed interface, or a wrapping sequential identification of
-       synchronization.  The application should send group ’1’ if it has
-       no specific need for this, and may ignore it on navigation
-       receipt if such values have no meaning.
+           Required in navigation.  A synchronization group number, a single
+           ASCII digit, ’1’ through ’9’, the interpretation of which is left
+           to the application.  This may be used to identify a related group
+           of windows displayed by the application, or a tab number within a
+           tabbed interface, or a wrapping sequential identification of
+           synchronization.  The application should send group ’1’ if it has
+           no specific need for this, and may ignore it on navigation
+           receipt if such values have no meaning.
 
-   12. msg.sync.domain
+       12. msg.sync.domain
 
-       Required in navigation.  This field has a fixed value of "BIBLE‐
-       VERSE" but its use will be expanded in future revisions.
+           Required in navigation.  This field has a fixed value of "BIBLE-
+           VERSE" but its use will be expanded in future revisions.
 
 
 
 
 
-Stergiou et al                                                 [Page 5]
+    Stergiou et al                                                 [Page 5]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-Security Considerations
+    Security Considerations
 
-   BibleSync is a protocol defined for a friendly environment.  It
-   transmits cleartext with no anticipation of encrypted content, and
-   any packet sniffer can see what is going on, including the passphrase
-   (that being nothing more than a conversation discriminant).
+       BibleSync is a protocol defined for a friendly environment.  It
+       transmits cleartext with no anticipation of encrypted content, and
+       any packet sniffer can see what is going on, including the passphrase
+       (that being nothing more than a conversation discriminant).
 
-   Spoofing must be defended against.  That is, the identity of a
-   speaker is visible to all, and a malicious user can generate
-   artificial packets which appear to be from someone else, thereby
-   possibly impersonating a legitimate speaker and inducing others’
-   applications to navigate inappropriately.  The application should
-   retain enough information from the first beacon received from each
-   speaker so that subsequent packets can be verified.  Specifically,
-   the application should check that the UUID of a packet is coming from
-   the same IP address from which the speaker was first heard.
+       Spoofing must be defended against.  That is, the identity of a
+       speaker is visible to all, and a malicious user can generate
+       artificial packets which appear to be from someone else, thereby
+       possibly impersonating a legitimate speaker and inducing others’
+       applications to navigate inappropriately.  The application should
+       retain enough information from the first beacon received from each
+       speaker so that subsequent packets can be verified.  Specifically,
+       the application should check that the UUID of a packet is coming from
+       the same IP address from which the speaker was first heard.  It is
+       important that the first beacon be transmitted before the presence
+       announcement, because both contain the UUID, and an interloper could
+       begin to impersonate the legitimate speaker via contrived beacons and
+       navigation before the legitimate speaker himself begins to transmit
+       his own.  The UUID’s presence in the 1st beacon packet prevents
+       interlopers from being able to do this.
 
-Example Packets
+    Example Packets
 
-   Presence announcement:
+       Presence announcement:
 
-       magic: 0x409caf11
-       version: 0x02
-       type: 0x01
-       uuid: 00112233‐4455‐6677‐8899‐aabbccddeeff
-       #pkt: 1
-       pkt index: 0
-       app.name=TestBibleApp
-       app.inst.uuid=00112233‐4455‐6677‐8899‐aabbccddeeff
-       app.user=John Doe (jdoe)
-       msg.sync.passPhrase=qwerty
+           magic: 0x409caf11
+           version: 0x02
+           type: 0x01
+           uuid: 00112233-4455-6677-8899-aabbccddeeff
+           #pkt: 1
+           pkt index: 0
+           app.name=TestBibleApp
+           app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
+           app.user=John Doe (jdoe)
+           msg.sync.passPhrase=qwerty
 
-   Beacon is identical to presence announcement except for being type 3.
+       Beacon is identical to presence announcement except for being type 3.
 
-   Navigation:
+       Navigation:
 
-       magic: 0x409caf11
-       version: 0x02
-       type: 0x02
-       uuid: 00112233‐4455‐6677‐8899‐aabbccddeeff
-       #pkt: 1
-       pkt index: 0
-       app.name=TestBibleApp
-       app.inst.uuid=00112233‐4455‐6677‐8899‐aabbccddeeff
-       app.user=John Doe (jdoe)
-       msg.sync.passPhrase=qwerty
-       msg.sync.domain=BIBLE‐VERSE
-       msg.sync.group=1
+           magic: 0x409caf11
+           version: 0x02
+           type: 0x02
+           uuid: 00112233-4455-6677-8899-aabbccddeeff
+           #pkt: 1
+           pkt index: 0
 
 
 
-Stergiou et al                                                 [Page 6]
+    Stergiou et al                                                 [Page 6]
 
 
 
 
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-       msg.sync.bibleAbbrev=NET
-       msg.sync.verse=Rom.14.4
+           app.name=TestBibleApp
+           app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
+           app.user=John Doe (jdoe)
+           msg.sync.passPhrase=qwerty
+           msg.sync.domain=BIBLE-VERSE
+           msg.sync.group=1
+           msg.sync.bibleAbbrev=NET
+           msg.sync.verse=Rom.14.4
 
-   Additional name/value examples, optional use:
+       Additional name/value examples, optional use:
 
-       app.version=2.7a
-       app.os=Linux
-       app.device=i686
-       msg.sync.altVerse=1Mac.1.2
+           app.version=2.7a
+           app.os=Linux
+           app.device=i686
+           msg.sync.altVerse=1Mac.1.2
 
-   Real‐world example, using all defined names:
+       Real-world example, using all defined names:
 
-       magic: 0x409caf11
-       version: 0x02
-       type: 0x02 (sync)
-       uuid: 49b387bd‐6324‐4a2e‐871a‐4b24e065bff7
-       #pkt: 1
-       pkt index: 0
-       app.name=Xiphos
-       app.version=3.2.1
-       app.inst.uuid=49b387bd‐6324‐4a2e‐871a‐4b24e065bff7
-       app.os=Linux
-       app.device=x86_64: Linux @ awol.kleinpaste.org
-       app.user=Karl Kleinpaste (karl)
-       msg.sync.passPhrase=BibleSync
-       msg.sync.domain=BIBLE‐VERSE
-       msg.sync.group=1
-       msg.sync.bibleAbbrev=NET
-       msg.sync.altVerse=
-       msg.sync.verse=Rom.14.4
+           magic: 0x409caf11
+           version: 0x02
+           type: 0x02 (sync)
+           uuid: 49b387bd-6324-4a2e-871a-4b24e065bff7
+           #pkt: 1
+           pkt index: 0
+           app.name=Xiphos
+           app.version=3.2.1
+           app.inst.uuid=49b387bd-6324-4a2e-871a-4b24e065bff7
+           app.os=Linux
+           app.device=x86_64: Linux @ awol.kleinpaste.org
+           app.user=Karl Kleinpaste (karl)
+           msg.sync.passPhrase=BibleSync
+           msg.sync.domain=BIBLE-VERSE
+           msg.sync.group=1
+           msg.sync.bibleAbbrev=NET
+           msg.sync.altVerse=
+           msg.sync.verse=Rom.14.4
 
-References
+    References
 
-   Original specification:
-       http://biblesyncprotocol.wikispaces.com (u:General_Public p:password)
-   OSIS:
-       http://www.bibletechnologies.net/
-   BibleRef:
-       http://semanticbible.com/bibleref/bibleref‐specification.html
-   UUID:
-       RFC 4122
+       Original specification:
+           http://biblesyncprotocol.wikispaces.com (u:General_Public p:password)
+       OSIS:
+           http://www.bibletechnologies.net/
+       BibleRef:
+           http://semanticbible.com/bibleref/bibleref-specification.html
+       UUID:
+           RFC 4122
 
-   This specification alters and extends technical aspects of the original
-   specification (cf. wikispaces, above), notably max packet size, size and
-   alignment of header, speaker beacons, use of app.user, and stipulations
-   regarding name composition and newline separation.  That document includes
-   usage and policy details not appropriate to this form of specification.
 
 
 
+    Stergiou et al                                                 [Page 7]
 
-Stergiou et al                                                 [Page 7]
 
 
 
 
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
-RFC ‐BSP‐              BibleSync Protocol ‐ DRAFT           15 June 2014
 
+       This specification alters and extends technical aspects of the original
+       specification (cf. wikispaces, above), notably max packet size, size and
+       alignment of header, speaker beacons, use of app.user, and stipulations
+       regarding name composition and newline separation.  That document includes
+       usage and policy details not appropriate to this form of specification.
 
-Copyright
+    Copyright
 
-   No copyright is claimed.  All documents, descriptions, manual pages, and
-   source code for BibleSync are in the public domain.
+       No copyright is claimed.  All documents, descriptions, manual pages, and
+       source code for BibleSync are in the public domain.
 
-Contributor Addresses
+    Contributor Addresses
 
-   Costas Stergiou <root@theword.net>
-   Karl Kleinpaste <karl@kleinpaste.org>
-   William Mills <read_frequent@hotmail.com>
-   Tim Morton <morton@bibleanalyzer.com>
-   Craig Rairdin <craigr@laridian.com>
+       Costas Stergiou <root@theword.net>
+       Karl Kleinpaste <karl@kleinpaste.org>
+       William Mills <read_frequent@hotmail.com>
+       Tim Morton <morton@bibleanalyzer.com>
+       Craig Rairdin <craigr@laridian.com>
 
 
 
@@ -469,12 +475,6 @@ Contributor Addresses
 
 
 
-
-
-
-
-
-
-Stergiou et al                                                 [Page 8]
+    Stergiou et al                                                 [Page 8]
 
 

@@ -131,19 +131,6 @@ BibleSync_mode BibleSync::setMode(BibleSync_mode m,
 	Shutdown();
     }
 
-    // nav xmitters also xmit periodic beacons.
-    // send one soon...but not right this instant.
-    // otherwise cancel it.
-    beacon_countdown = ((mode == BSP_MODE_PERSONAL) ||
-			(mode == BSP_MODE_SPEAKER))
-	? 2 : 0;
-
-    // going to speaker mode means speaker list has become irrelevant.
-    if (mode == BSP_MODE_SPEAKER)
-    {
-	clearSpeakers();
-    }
-
     return mode;
 }
 
@@ -260,6 +247,26 @@ string BibleSync::Setup()
 		}
 		// bind(2) leaves us ready for recvfrom(2) calls.
 	    }
+	}
+
+	// if we are either kind of speaker, we must broadcast our first
+	// beacon immediately, to avoid a presence announcement from going
+	// out first, giving our uuid, and allowing time for a malicious
+	// user to start faking his own beacons & nav using our uuid.
+	if ((mode == BSP_MODE_PERSONAL) || (mode == BSP_MODE_SPEAKER))
+	{
+	    Transmit(BSP_BEACON);
+	    beacon_countdown = BSP_BEACON_COUNT;
+
+	    // speaker mode => speaker list has become irrelevant.
+	    if (mode == BSP_MODE_SPEAKER)
+	    {
+		clearSpeakers();
+	    }
+	}
+	else	// audience only.
+	{
+	    beacon_countdown = 0;
 	}
 
 	// now that we're alive, tell the network world that we're here.
@@ -470,7 +477,7 @@ int BibleSync::ReceiveInternal()
 			if (object->second.addr != source_addr)	// spoof?
 			{
 			    // spock: "forbid...forbid!"
-			    (*nav_func)('E', pkt_uuid,
+			    (*nav_func)('M', pkt_uuid,
 					EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 					BSP + _("Spoof stopped: ") + pkt_uuid
 						+ " from " + source_addr
