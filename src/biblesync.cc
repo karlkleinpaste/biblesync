@@ -17,9 +17,9 @@
 // BibleSync - class implementation.
 //
 
-using namespace std;
-
 #include <biblesync.hh>
+
+using namespace std;
 
 // sync is a proper superset of announce & beacon,
 // both inbound as well as outbound.

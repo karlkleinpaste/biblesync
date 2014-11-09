@@ -144,8 +144,6 @@
 // a mismatch.
 // Note also that Personal is both speaker and audience.
 
-using namespace std;
-
 #include <map>
 #include <string>
 
@@ -170,6 +168,8 @@ using namespace std;
 #include <windows.h>
 #include <ws2tcpip.h>
 #endif
+
+using namespace std;
 
 typedef enum _BibleSync_mode {
     BSP_MODE_DISABLE,
