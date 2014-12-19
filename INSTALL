@@ -1,0 +1,15 @@
+Linux:
+  $ mkdir build/linux && cd build/linux
+  $ cmake -DBUILD_SHARED_LIBS=TRUE -DCMAKE_INSTALL_PREFIX=/usr -DLIBDIR=/usr/lib64 ../..
+  $ make && sudo make install
+Note use of /usr/lib64, which is appropriate for Fedora x86_64; perhaps
+use just /usr/lib instead if your system is different.
+
+Cross-compiling Win32 using MinGW:
+  $ . win32.opts
+  $ mkdir build/win32 && cd build/win32
+  $ cmake $WIN32_OPTS -DBUILD_SHARED_LIBS=TRUE ../..
+  $ make && sudo make install
+Some versions of CMake result in files being mis-installed in the system's
+/usr/lib instead of e.g. /usr/i686-w64-mingw32/sys-root/mingw/lib.  Watch
+the resulting paths chosen carefully.
