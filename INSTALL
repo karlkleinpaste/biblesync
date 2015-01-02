@@ -1,5 +1,5 @@
 Linux:
-  $ mkdir build/linux && cd build/linux
+  $ mkdir -p build/linux && cd build/linux
   $ cmake -DBUILD_SHARED_LIBS=TRUE -DCMAKE_INSTALL_PREFIX=/usr -DLIBDIR=/usr/lib64 ../..
   $ make && sudo make install
 Note use of /usr/lib64, which is appropriate for Fedora x86_64; perhaps
