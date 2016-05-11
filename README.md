@@ -28,7 +28,7 @@ git clone https://github.com/crosswire/xiphos
 
 ...and see:
 
-- main/biblesync-glue.* for incoming event handling and "glue" routines.
-- main/sword.cc for initialization + how xmit is handled.
-- gnome2/search_dialog.c and gnome2/sidebar.c for verse list xmit.
-- gnome2/preferences_dialog.c and ui/prefs.glade for configuration UI.
+- `main/biblesync-glue.*` for incoming event handling and "glue" routines.
+- `main/sword.cc` for initialization + how xmit is handled.
+- `gnome2/search_dialog.c` and `gnome2/sidebar.c` for verse list xmit.
+- `gnome2/preferences_dialog.c` and `ui/prefs.glade` for configuration UI.
