@@ -1,0 +1,34 @@
+# BibleSync
+
+This is a C++ single class library encapsulating a protocol conduit.  The
+premise is that there is a local network over which to multicast Bible
+navigation, and someone, possibly several someones, will transmit, and others
+will receive.  The choices for when you decide to xmit and what to do when you
+recv are up to you as the application designer.
+
+Access to the conduit is by creating the object, setting the mode, calling
+Transmit() to xmit nav events, and arranging the frequent polling of Receive()
+to recv nav events.  There is more than just navigation to be handled; there
+are live/dead events for potential Speakers as well as mismatches, presence
+announcements, and errors.  There is a programming reference biblesync.7 which
+explains the details, both from a high level view of the essentials of the
+protocol's behavior and at a low level of how you create, access, and use the
+conduit class.  The (single) BibleSync object should persist throughout the
+life of your application, but at any time you can set the mode to "disable,"
+and preferably stop the receive polling, and then re-enable it later as the
+user needs.
+
+Much work has been done in integrating this library into its first application,
+Xiphos.  It is useful to examine Xiphos' code to see where and how integration
+has been done.  Get a Xiphos source tree using:
+
+~~~
+git clone https://github.com/crosswire/xiphos
+~~~
+
+...and see:
+
+- `main/biblesync-glue.*` for incoming event handling and "glue" routines.
+- `main/sword.cc` for initialization + how xmit is handled.
+- `gnome2/search_dialog.c` and `gnome2/sidebar.c` for verse list xmit.
+- `gnome2/preferences_dialog.c` and `ui/prefs.glade` for configuration UI.
