@@ -94,7 +94,7 @@ SET(BIBLESYNC_VERSION_NUM "${BIBLESYNC_VERSION_MAJOR}${MINOR}${MICRO}${NANO}")
 # End of copy from Sword's code
 ##########################################################################################
 
-# Set the SOVERSION of the package, for binary compatability tracking
+# Set the SOVERSION of the package, for binary compatibility tracking
 INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/soversion.cmake")
 
 # Set the variables in the .in file
