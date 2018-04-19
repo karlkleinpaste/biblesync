@@ -47,8 +47,7 @@ SYNOPSIS
        BibleSync_mode BibleSync::getMode(void);
        string BibleSync::getVersion(void);
        string BibleSync::getPassphrase(void);
-       BibleSync_xmit_status BibleSync::Transmit(char type,
-                                                 string bible, string ref, string alt,
+       BibleSync_xmit_status BibleSync::Transmit(string bible, string ref, string alt,
                                                  string group, string domain);
        static int BibleSync::Receive(void *object);
        bool BibleSync::setPrivate(bool privacy);
@@ -167,10 +166,8 @@ PUBLIC INTERFACE
        tion may request the current passphrase, so as to provide a default.
 
    Transmit
-       The application must provide the message type, which in the normal case
-       should be BSP_SYNC.  The protocol requires all  the  indicated  parame-
-       ters, but all have defaults in Transmit: KJV, Gen.1.1, empty alternate,
-       1, and BIBLE-VERSE.
+       The  protocol requires  all  the  indicated  parameters, but  all  have
+       defaults in Transmit: KJV, Gen.1.1, empty alternate, 1, and BIBLE-VERSE.
 
    Receive
        This is a static method accessible from either C or C++.   It  must  be
@@ -186,6 +183,14 @@ PUBLIC INTERFACE
        single  system, when in Personal mode, the application may also request
        privacy.  The effect is to set multicast  TTL  to  zero,  meaning  that
        packets will not go out on the wire.
+
+   setBeaconCount
+       Beacon transmission  occurs during  every Nth  call to  Receive();  the
+       default value is 10.  This presumes the application will call Receive()
+       once  per   second.  If   the  application   will  call Receive()  less
+       frequently, divide  that  time (say, 2 seconds) into 10  to get a value
+       (5) to use  with  this  call. Use  setBeaconCount() prior  to  enabling
+       Personal or Speaker mode.
 
    listenToSpeaker
        Aside  from  default  listen  behavior  detailed above, the application
@@ -297,4 +302,4 @@ SEE ALSO
 
 
 
-Linux                             2014-10-31                      BIBLESYNC(7)
+Linux                             2018-04-10                      BIBLESYNC(7)

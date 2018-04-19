@@ -97,10 +97,8 @@
 //
 // - send navigation.
 //	BibleSync_xmit_status retval =
-//		Transmit(BSP_SYNC,
-//			 "NASB", "John.3.16", "some alt ref",
-//			 "1", "BIBLE-VERSE");
-//	  params: type (sync only), bible, ref, alt-ref, group, domain.
+//		Transmit("NASB", "John.3.16", "some alt ref", "1", "BIBLE-VERSE");
+//	  params: bible, ref, alt-ref, group, domain.
 //	  all params have defaults.
 //	=> it is the application's responsibility to send well-formed verse
 //	   references.
@@ -109,6 +107,16 @@
 //	bool setPrivate(boolean);
 //	  sets outgoing TTL to zero so no one hears you off-machine.
 //	  applicable only to BSP_PERSONAL mode.
+//
+// - set beacon count based on frequency of calling Receive()
+//      void setBeaconCount(int);
+//        how often will your app call Receive()?
+//        divide 10 by that, call setBeaconCount(result).
+//
+// - set new username
+//      void setUser(string);
+//        for apps (such as Bishop) which allow the user to set the friendly name
+//        and which may be changed at some point whle BibleSync runs.
 //
 // - allow another speaker to drive us
 //	void listenToSpeaker(bool listen, string speakerkey)
@@ -300,7 +308,8 @@ private:
     bool receiving;
 
     // when xmit-capable, we xmit BSP_BEACON every N calls of Receive().
-    uint8_t beacon_countdown;
+    uint8_t beacon_countdown;	// progress toward our next beacon xmit
+    uint8_t beacon_count;	// how many Receive() calls between beacon xmits
 
     // track currently-known speaker set.
     BibleSyncSpeakerMap speakers;
@@ -336,6 +345,15 @@ private:
     // real receiver.
     int ReceiveInternal();		// C++ object context.
     int InitSelectRead(char *, struct sockaddr_in *, BibleSyncMessage *);
+
+    // real transmitter.
+    BibleSync_xmit_status
+    TransmitInternal(char message_type = BSP_SYNC,
+		     string bible  = "KJV",
+		     string ref    = "Gen.1.1",
+		     string alt    = "",
+		     string group  = "1",
+		     string domain = "BIBLE-VERSE");
 
     // speaker list management.
     void ageSpeakers();
@@ -376,18 +394,42 @@ public:
     static int Receive(void *myself); // assume C context: poll from timeout.
 
     // speaker transmitter
-    BibleSync_xmit_status Transmit(char message_type = BSP_SYNC,
-				   string bible  = "KJV",
-				   string ref    = "Gen.1.1",
-				   string alt    = "",
-				   string group  = "1",
-				   string domain = "BIBLE-VERSE");
+    // public interface permits only BSP_SYNC transmission.
+    // there is no reason for an app to send presence or beacon on its own.
+    inline BibleSync_xmit_status Transmit(string bible  = "KJV",
+					  string ref    = "Gen.1.1",
+					  string alt    = "",
+					  string group  = "1",
+					  string domain = "BIBLE-VERSE")
+    {
+	return TransmitInternal(BSP_SYNC, bible, ref, alt, group, domain);
+    }
 
     // set privacy using TTL 0 in personal mode.
     bool setPrivate(bool privacy);
 
     // say whether you want to hear from this speaker.
     void listenToSpeaker(bool listen, string speakerkey);
+
+    // Speaker beacon must go out roughly every 10 seconds,
+    // set count to approx divisor. how often does your app call Receive()?
+    // every second, default 10.
+    // every 2 seconds, use 5.
+    // every 3 seconds, use 3 (9 seconds, fine).
+    // value is force-bounded [3..10].
+    inline void setBeaconCount(uint8_t count)
+    {
+	if (count > 10) count = 10;
+	if (count < 3)  count = 3;
+	beacon_count = count;
+    }
+
+    // set new user name
+    // useful for apps that can change the name on the fly (e.g. Bishop).
+    inline void setUser(string u)
+    {
+	user = u;
+    }
 };
 
 #endif // __BIBLESYNC_HH__

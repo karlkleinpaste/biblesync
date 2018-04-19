@@ -25,7 +25,7 @@ using namespace std;
 // both inbound as well as outbound.
 // in these 2 arrays of strings, sync-specific
 // fields are placed after announce fields.
-// see field_count in ReceiveInternal and Transmit.
+// see field_count in ReceiveInternal + TransmitInternal.
 static string inbound_required[] = {
     BSP_APP_NAME,
     BSP_APP_INSTANCE_UUID,
@@ -61,6 +61,7 @@ BibleSync::BibleSync(string a, string v, string u)
       user(u),
       receiving(false),
       beacon_countdown(0),
+      beacon_count(BSP_BEACON_COUNT),
       mode(BSP_MODE_DISABLE),
       nav_func(NULL),
       passphrase("BibleSync"),
@@ -196,7 +197,8 @@ string BibleSync::Setup()
 
 	// one way or another, if we got this far with a valid socket,
 	// and the app is in a public mode, "TTL 0" privacy makes no sense.
-	if ((client_fd >= 0) &&
+	if (ok_so_far &&
+	    (client_fd >= 0) &&
 	    ((mode == BSP_MODE_SPEAKER) ||
 	     (mode == BSP_MODE_AUDIENCE)))
 	{
@@ -254,8 +256,8 @@ string BibleSync::Setup()
 	// user to start faking his own beacons & nav using our uuid.
 	if ((mode == BSP_MODE_PERSONAL) || (mode == BSP_MODE_SPEAKER))
 	{
-	    Transmit(BSP_BEACON);
-	    beacon_countdown = BSP_BEACON_COUNT;
+	    TransmitInternal(BSP_BEACON);
+	    beacon_countdown = beacon_count;
 
 	    // speaker mode => speaker list has become irrelevant.
 	    if (mode == BSP_MODE_SPEAKER)
@@ -270,7 +272,7 @@ string BibleSync::Setup()
 
 	// now that we're alive, tell the network world that we're here.
 	if (retval == "")
-	    Transmit(BSP_ANNOUNCE);
+	    TransmitInternal(BSP_ANNOUNCE);
     }
 
     return retval;
@@ -616,7 +618,7 @@ int BibleSync::ReceiveInternal()
 			    // whether previously known or not,
 			    // a beacon (re)starts the aging countdown.
 			    speakers[pkt_uuid].countdown =
-				BSP_BEACON_COUNT * BSP_BEACON_MULTIPLIER;
+				beacon_count * BSP_BEACON_MULTIPLIER;
 
 			    new_speakers_size = speakers.size();
 
@@ -670,8 +672,8 @@ int BibleSync::ReceiveInternal()
 	 (mode == BSP_MODE_SPEAKER)) &&
 	(--beacon_countdown == 0))
     {
-	Transmit(BSP_BEACON);
-	beacon_countdown = BSP_BEACON_COUNT;
+	TransmitInternal(BSP_BEACON);
+	beacon_countdown = beacon_count;
     }
 
     return TRUE;
@@ -724,12 +726,13 @@ int BibleSync::InitSelectRead(char *dump,
 // speaker transmitter
 // sanity checks for permission to xmit,
 // then format and ship it.
-BibleSync_xmit_status BibleSync::Transmit(char message_type,
-					  string bible,
-					  string ref,
-					  string alt,
-					  string group,
-					  string domain)
+BibleSync_xmit_status
+BibleSync::TransmitInternal(char message_type,
+			    string bible,
+			    string ref,
+			    string alt,
+			    string group,
+			    string domain)
 {
     if (mode == BSP_MODE_DISABLE)
 	return BSP_XMIT_FAILED;
