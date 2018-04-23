@@ -87,10 +87,13 @@
        The magic value is 0x409CAF11, by which to determine that a packet is
        intended for BibleSync.
 
-       The protocol version is 2.
+       The protocol version is 3. The protocol interoperates with the
+       previous version 2, though lacking the distinguishing feature of chat
+       messages.
 
-       Three message types are defined: 1 = presence announcement, 2 =
-       navigation synchronization, 3 = speaker availability beacon.
+       Four message types are defined: 1 = presence announcement, 2 =
+       navigation synchronization, 3 = speaker availability beacon, 4 = chat
+       message.
 
        Currently BibleSync is specified as a single packet protocol, but the
        number of packets and packet index fields are included for possible
@@ -109,9 +112,6 @@
 
     Packet Type Overview
 
-       The presence packet announces the application’s participation in the
-       conversation.  It is non-essential, but useful if the application
-       designer chooses to make it visible to the user.
 
 
 
@@ -124,6 +124,10 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
+       The presence packet announces the application’s participation in the
+       conversation.  It is non-essential, but useful if the application
+       designer chooses to make it visible to the user.
+
        The navigation packet specifies a Bible name and a reference.  It may
        also contain an alternate reference to provide a second means of
        interpretation so that e.g. differing Bible versifications might be
@@ -135,6 +139,9 @@
        The speaker beacon packet is identical to the presence announcement
        except for having message type 3, and is sent by transmitting
        applications every 10 seconds.
+
+       The chat message packet contains only 1 field beyond those found in
+       announce and beacon, which is the message content.
 
     Speaker Beacons
 
@@ -165,13 +172,6 @@
        ignored.  For example, if a proper speaker and an interloper are both
        claiming speaker status by sending beacons, and a newly-started
        application begins to listen, it may first hear the interloper’s
-       beacon and begin listening to it.  The user must be able to consult a
-       list of potential speakers and pick the one(s) actually needed.
-
-       Beacons must be sent at least every 10 seconds.  Receivers must track
-       speaker beacons, aging speakers toward removal.  Each new beacon for
-       a speaker restarts its aging countdown.  A potential speaker that has
-       gone beacon-silent for 30 seconds is considered a dead speaker and is
 
 
 
@@ -184,6 +184,13 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
+       beacon and begin listening to it.  The user must be able to consult a
+       list of potential speakers and pick the one(s) actually needed.
+
+       Beacons must be sent at least every 10 seconds.  Receivers must track
+       speaker beacons, aging speakers toward removal.  Each new beacon for
+       a speaker restarts its aging countdown.  A potential speaker that has
+       gone beacon-silent for 30 seconds is considered a dead speaker and is
        removed from the list of available speakers.
 
        Navigation synchronization received without beacon support is
@@ -225,13 +232,6 @@
 
         5. app.version
 
-           Optional; recommended.  The application’s version stamp.
-
-        6. app.os
-
-           Optional.  Identification of the OS under which the application
-           runs.
-
 
 
 
@@ -243,6 +243,13 @@
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
+
+           Optional; recommended.  The application’s version stamp.
+
+        6. app.os
+
+           Optional.  Identification of the OS under which the application
+           runs.
 
         7. app.device
 
@@ -286,13 +293,6 @@
            no specific need for this, and may ignore it on navigation
            receipt if such values have no meaning.
 
-       12. msg.sync.domain
-
-           Required in navigation.  This field has a fixed value of "BIBLE-
-           VERSE" but its use will be expanded in future revisions.
-
-
-
 
 
     Stergiou et al                                                 [Page 5]
@@ -302,6 +302,18 @@
 
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
+
+
+       12. msg.sync.domain
+
+           Required in navigation.  This field has a fixed value of "BIBLE-
+           VERSE" but its use will be expanded in future revisions.
+
+       13. msg.chat
+
+           Required for chat and useful only there. A free-from, newline-
+           less text string to be shared in the conversation, intended to be
+           displayed to all users.
 
 
     Security Considerations
@@ -332,7 +344,7 @@
        Presence announcement:
 
            magic: 0x409caf11
-           version: 0x02
+           version: 0x03
            type: 0x01
            uuid: 00112233-4455-6677-8899-aabbccddeeff
            #pkt: 1
@@ -340,18 +352,6 @@
            app.name=TestBibleApp
            app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
            app.user=John Doe (jdoe)
-           msg.sync.passPhrase=qwerty
-
-       Beacon is identical to presence announcement except for being type 3.
-
-       Navigation:
-
-           magic: 0x409caf11
-           version: 0x02
-           type: 0x02
-           uuid: 00112233-4455-6677-8899-aabbccddeeff
-           #pkt: 1
-           pkt index: 0
 
 
 
@@ -364,6 +364,18 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
+           msg.sync.passPhrase=qwerty
+
+       Beacon is identical to presence announcement except for being type 0x03.
+
+       Navigation:
+
+           magic: 0x409caf11
+           version: 0x03
+           type: 0x02
+           uuid: 00112233-4455-6677-8899-aabbccddeeff
+           #pkt: 1
+           pkt index: 0
            app.name=TestBibleApp
            app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
            app.user=John Doe (jdoe)
@@ -373,6 +385,20 @@
            msg.sync.bibleAbbrev=NET
            msg.sync.verse=Rom.14.4
 
+       Chat:
+
+           magic: 0x409caf11
+           version: 0x03
+           type: 0x04
+           uuid: 00112233-4455-6677-8899-aabbccddeeff
+           #pkt: 1
+           pkt index: 0
+           app.name=TestBibleApp
+           app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
+           app.user=John Doe (jdoe)
+           msg.sync.passPhrase=qwerty
+           msg.chat=This is just a test message. No newlines permitted.
+
        Additional name/value examples, optional use:
 
            app.version=2.7a
@@ -380,16 +406,28 @@
            app.device=i686
            msg.sync.altVerse=1Mac.1.2
 
-       Real-world example, using all defined names:
+       Real-world example, navigation synchronization, using all defined names:
 
            magic: 0x409caf11
-           version: 0x02
+           version: 0x03
            type: 0x02 (sync)
            uuid: 49b387bd-6324-4a2e-871a-4b24e065bff7
+
+
+
+    Stergiou et al                                                 [Page 7]
+
+
+
+
+
+    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
+
+
            #pkt: 1
            pkt index: 0
            app.name=Xiphos
-           app.version=3.2.1
+           app.version=4.1.0
            app.inst.uuid=49b387bd-6324-4a2e-871a-4b24e065bff7
            app.os=Linux
            app.device=x86_64: Linux @ awol.kleinpaste.org
@@ -412,18 +450,6 @@
        UUID:
            RFC 4122
 
-
-
-
-    Stergiou et al                                                 [Page 7]
-
-
-
-
-
-    RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
-
-
        This specification alters and extends technical aspects of the original
        specification (cf. wikispaces, above), notably max packet size, size and
        alignment of header, speaker beacons, use of app.user, and stipulations
@@ -442,32 +468,6 @@
        William Mills <read_frequent@hotmail.com>
        Tim Morton <morton@bibleanalyzer.com>
        Craig Rairdin <craigr@laridian.com>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

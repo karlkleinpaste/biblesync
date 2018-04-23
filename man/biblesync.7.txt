@@ -1,7 +1,5 @@
 BIBLESYNC(7)               Linux Programmer's Manual              BIBLESYNC(7)
 
-
-
 NAME
        biblesync - multicast navigation synchronization in Bible programs
 
@@ -49,8 +47,11 @@ SYNOPSIS
        string BibleSync::getPassphrase(void);
        BibleSync_xmit_status BibleSync::Transmit(string bible, string ref, string alt,
                                                  string group, string domain);
+       BibleSync_xmit_status BibleSync::Chat(string message);
        static int BibleSync::Receive(void *object);
        bool BibleSync::setPrivate(bool privacy);
+       void BibleSync::setBeaconCount(uint8_t count);
+       void BibleSync::setUser(string user);
        void BibleSync::listenToSpeaker(bool listen, string speakerkey);
 
 DESCRIPTION
@@ -166,31 +167,42 @@ PUBLIC INTERFACE
        tion may request the current passphrase, so as to provide a default.
 
    Transmit
-       The  protocol requires  all  the  indicated  parameters, but  all  have
-       defaults in Transmit: KJV, Gen.1.1, empty alternate, 1, and BIBLE-VERSE.
+       The  protocol  requires  all  the  indicated  parameters,  but all have
+       defaults in Transmit: KJV, Gen.1.1,  empty  alternate,  1,  and  BIBLE-
+       VERSE.
+
+   Chat
+       This is a method for transmission of casual text messages to all others
+       in the conversation.  It is expected to be received by applications who
+       will display them in a suitable manner to the user.
 
    Receive
-       This is a static method accessible from either C or C++.   It  must  be
+       This  is  a  static method accessible from either C or C++.  It must be
        called with the object pointer so as to re-enter object context for the
-       private internal receiver.  Receive() must be  called  regularly  (i.e.
+       private  internal  receiver.   Receive() must be called regularly (i.e.
        polled) as long as it continues to return TRUE.  When it returns FALSE,
-       it means that the mode has changed to BSP_MODE_DISABLE, and the  sched-
+       it  means that the mode has changed to BSP_MODE_DISABLE, and the sched-
        uled polling should stop.  See also the note below on polled reception.
 
    setPrivate
-       In  the  circumstance where the user has multiple programs running on a
+       In the circumstance where the user has multiple programs running  on  a
        single computer and does not want his navigation broadcast outside that
-       single  system, when in Personal mode, the application may also request
-       privacy.  The effect is to set multicast  TTL  to  zero,  meaning  that
+       single system, when in Personal mode, the application may also  request
+       privacy.   The  effect  is  to  set multicast TTL to zero, meaning that
        packets will not go out on the wire.
 
    setBeaconCount
-       Beacon transmission  occurs during  every Nth  call to  Receive();  the
-       default value is 10.  This presumes the application will call Receive()
-       once  per   second.  If   the  application   will  call Receive()  less
-       frequently, divide  that  time (say, 2 seconds) into 10  to get a value
-       (5) to use  with  this  call. Use  setBeaconCount() prior  to  enabling
-       Personal or Speaker mode.
+       Beacon transmission occurs during every  Nth  call  to  Receive();  the
+       default  value is 10. This presumes the application will call Receive()
+       once per second. If the  application  will  call  Receive()  less  fre-
+       quently,  divide  that time (say, 2 seconds) into 10 to get a value (5)
+       to use with this call. Use setBeaconCount() prior to enabling  Personal
+       or Speaker mode.
+
+   setUser
+       If  the  application allows the user to set a name via settings dialog,
+       setUser() is available to re-assign the associated user name as seen by
+       others.
 
    listenToSpeaker
        Aside  from  default  listen  behavior  detailed above, the application
@@ -221,6 +233,9 @@ RECEIVE USE CASES
        Dead Speaker.  speakerkey holds the UUID key of a previously-identified
        application which is no longer a candidate for listening.
 
+   'C'
+       Chat.  alt contains the message text.
+
    'M'
        Mismatch.  The incoming event packet is mismatched, either against  the
        current  passphrase  or  for  a  navigation synchronization packet when
@@ -248,58 +263,59 @@ NOTES
        again scheduled for polled use.
 
        A 1-second poll interval is expected.  Brief experience during develop-
-       ment has shown that longer intervals lead to a perception of lag.
+       ment  has  shown  that longer intervals lead to a perception of lag. If
+       the application designer nonetheless expects  to  call  Receive()  less
+       frequently,  it is necessary to use setBeaconCount() to change the num-
+       ber of calls to it between beacon transmissions.
 
        During every Receive() call, all waiting packets are processed.
 
    No datalink security
-       BibleSync  is a protocol defined for a friendly environment.  It offers
-       no security in its current specification, and any packet  sniffer  such
-       as  wireshark(1)  or  tcpdump(8)  can see the entire conversation.  The
+       BibleSync is a protocol defined for a friendly environment.  It  offers
+       no  security  in its current specification, and any packet sniffer such
+       as wireshark(1) or tcpdump(8) can see  the  entire  conversation.   The
        specification makes passing reference to future encryption, but at this
        time none is implemented.
 
    Managed Speaker lists
-       The  addition of transmitter beacons was a result of initial experience
-       showing that it can be too easy for a user to mis-start  BibleSync,  or
-       for  a malicious user to interject himself into serious work.  The goal
-       of beacons is to provide a means by which, on the one  hand,  the  user
-       can  be  made  aware  of  who is attempting to be a Speaker and, on the
-       other hand, confine the set of Speakers whom the user  will  permit  to
-       make  synchronization  changes in the application.  The simplest use of
-       'S' new Speaker notification  events  is  to  respond  with  listenToS-
-       peaker(true,  speakerkey)  which  in  effect  makes BibleSync behave as
-       though there are no beacons.  More serious use of 'S'/'D'  is  for  the
-       application  to manage its own sense of available Speakers, providing a
+       The addition of transmitter beacons was a result of initial  experience
+       showing  that  it can be too easy for a user to mis-start BibleSync, or
+       for a malicious user to interject himself into serious work.  The  goal
+       of  beacons  is  to provide a means by which, on the one hand, the user
+       can be made aware of who is attempting to be  a  Speaker  and,  on  the
+       other  hand,  confine  the set of Speakers whom the user will permit to
+       make synchronization changes in the application.  The simplest  use  of
+       'S'  new  Speaker  notification  events  is  to respond with listenToS-
+       peaker(true, speakerkey) which in  effect  makes  BibleSync  behave  as
+       though  there  are  no beacons.  More serious use of 'S'/'D' is for the
+       application to manage its own sense of available Speakers, providing  a
        means by which the user can make sensible selections about how to react
        to each Speaker's presence.  BibleSync can be told to listen to legiti-
-       mate Speakers, and to ignore interlopers, whether intended  maliciously
+       mate  Speakers, and to ignore interlopers, whether intended maliciously
        or merely due to other users' inadvertent behavior.
 
    Sending verse lists
-       One  of  the  better uses of BibleSync is in sharing verse lists.  Con-
-       sider a relatively weak application, perhaps on a mobile device, and  a
-       desktop-based  application with strong search capability.  Run searches
-       on the desktop, and send the result via BibleSync to  the  mobile  app.
-       The  ref  parameter  is  not confined to a single reference.  In normal
+       One of the better uses of BibleSync is in sharing  verse  lists.   Con-
+       sider  a relatively weak application, perhaps on a mobile device, and a
+       desktop-based application with strong search capability.  Run  searches
+       on  the  desktop,  and send the result via BibleSync to the mobile app.
+       The ref parameter is not confined to a  single  reference.   In  normal
        citation syntax, the verse reference may consist of semicolon-separated
-       references,  comma-separated  verses,  and hyphen-separated ranges.  Be
-       aware that the specification has a relatively  short  limit  on  packet
+       references, comma-separated verses, and  hyphen-separated  ranges.   Be
+       aware  that  the  specification  has a relatively short limit on packet
        size, so that at most a few dozen references will be sent.
 
    Standard reference syntax
-       It  is  the responsibility of the application to transmit references in
+       It is the responsibility of the application to transmit  references  in
        standard format.  BibleSync neither validates nor converts the applica-
        tion's incoming bible, ref, and alt parameters.  The specification ref-
        erences the BibleRef and OSIS specifications.
 
 SEE ALSO
-       http://biblesyncprotocol.wikispaces.com (user  "General_Public",  pass-
+       http://biblesyncprotocol.wikispaces.com  (user  "General_Public", pass-
        word "password"), http://semanticbible.com/bibleref/bibleref-specifica-
        tion.html, socket(2), setsockopt(2), select(2), recvfrom(2), sendto(2),
-       and  ip(7),  especially sections on IP_ADD_MEMBERSHIP, IP_MULTICAST_IF,
+       and ip(7), especially sections on  IP_ADD_MEMBERSHIP,  IP_MULTICAST_IF,
        IP_MULTICAST_LOOP, and IP_MULTICAST_TTL.
 
-
-
-Linux                             2018-04-10                      BIBLESYNC(7)
+Linux                             2014-10-31                      BIBLESYNC(7)

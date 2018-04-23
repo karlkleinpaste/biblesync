@@ -90,10 +90,11 @@ following:
 The magic value is 0x409CAF11, by which to determine that a packet is
 intended for BibleSync.
 
-The protocol version is 2.
+The protocol version is 3. The protocol interoperates with the previous
+version 2, though lacking the distinguishing feature of chat messages.
 
-Three message types are defined: 1 = presence announcement, 2 = navigation
-synchronization, 3 = speaker availability beacon.
+Four message types are defined: 1 = presence announcement, 2 = navigation
+synchronization, 3 = speaker availability beacon, 4 = chat message.
 
 Currently BibleSync is specified as a single packet protocol, but the
 number of packets and packet index fields are included for possible future
@@ -128,6 +129,9 @@ interaction.
 The speaker beacon packet is identical to the presence announcement except
 for having message type 3, and is sent by transmitting applications every
 10 seconds.
+
+The chat message packet contains only 1 field beyond those found in
+announce and beacon, which is the message content.
 
 .ti 0
 Speaker Beacons
@@ -277,6 +281,14 @@ may ignore it on navigation receipt if such values have no meaning.
 Required in navigation.  This field has a fixed value of "BIBLE-VERSE" but
 its use will be expanded in future revisions.
 
+.in 3
+13. msg.chat
+
+.in 7
+Required for chat and useful only there. A free-from, newline-less text
+string to be shared in the conversation, intended to be displayed to all
+users.
+
 
 .in 3
 .ti 0
@@ -309,7 +321,7 @@ Example Packets
 Presence announcement:
 
     magic: 0x409caf11
-    version: 0x02
+    version: 0x03
     type: 0x01
     uuid: 00112233-4455-6677-8899-aabbccddeeff
     #pkt: 1
@@ -319,12 +331,12 @@ Presence announcement:
     app.user=John Doe (jdoe)
     msg.sync.passPhrase=qwerty
 
-Beacon is identical to presence announcement except for being type 3.
+Beacon is identical to presence announcement except for being type 0x03.
 
 Navigation:
 
     magic: 0x409caf11
-    version: 0x02
+    version: 0x03
     type: 0x02
     uuid: 00112233-4455-6677-8899-aabbccddeeff
     #pkt: 1
@@ -338,6 +350,20 @@ Navigation:
     msg.sync.bibleAbbrev=NET
     msg.sync.verse=Rom.14.4
 
+Chat:
+
+    magic: 0x409caf11
+    version: 0x03
+    type: 0x04
+    uuid: 00112233-4455-6677-8899-aabbccddeeff
+    #pkt: 1
+    pkt index: 0
+    app.name=TestBibleApp
+    app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
+    app.user=John Doe (jdoe)
+    msg.sync.passPhrase=qwerty
+    msg.chat=This is just a test message. No newlines permitted.
+
 Additional name/value examples, optional use:
 
     app.version=2.7a
@@ -345,16 +371,16 @@ Additional name/value examples, optional use:
     app.device=i686
     msg.sync.altVerse=1Mac.1.2
 
-Real-world example, using all defined names:
+Real-world example, navigation synchronization, using all defined names:
 
     magic: 0x409caf11
-    version: 0x02
+    version: 0x03
     type: 0x02 (sync)
     uuid: 49b387bd-6324-4a2e-871a-4b24e065bff7
     #pkt: 1
     pkt index: 0
     app.name=Xiphos
-    app.version=3.2.1
+    app.version=4.1.0
     app.inst.uuid=49b387bd-6324-4a2e-871a-4b24e065bff7
     app.os=Linux
     app.device=x86_64: Linux @ awol.kleinpaste.org

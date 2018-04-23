@@ -21,20 +21,32 @@
 
 using namespace std;
 
-// sync is a proper superset of announce & beacon,
+// chat is a proper superset of announce/beacon,
+// sync is a proper superset of chat,
 // both inbound as well as outbound.
-// in these 2 arrays of strings, sync-specific
-// fields are placed after announce fields.
+// in these 2 arrays of strings, chat-specific fields follow
+// announce fields, and sync-specific follow chat fields.
+// (chat overloads bible for this purpose.)
 // see field_count in ReceiveInternal + TransmitInternal.
 static string inbound_required[] = {
     BSP_APP_NAME,
     BSP_APP_INSTANCE_UUID,
     BSP_APP_USER,
     BSP_MSG_PASSPHRASE,
+    BSP_MSG_SYNC_BIBLEABBREV,
     BSP_MSG_SYNC_DOMAIN,
     BSP_MSG_SYNC_VERSE,
-    BSP_MSG_SYNC_BIBLEABBREV,
     BSP_MSG_SYNC_GROUP
+};
+#define	CHAT_INBOUND_INDEX	4	// index in list above.
+
+static int inbound_required_count[5] =
+{
+	0,				// unused
+	BSP_FIELDS_RECV_ANNOUNCE,
+	BSP_FIELDS_RECV_SYNC,
+	BSP_FIELDS_RECV_ANNOUNCE,	// beacon identical to announce
+	BSP_FIELDS_RECV_CHAT
 };
 
 static string outbound_fill[] = {
@@ -45,12 +57,24 @@ static string outbound_fill[] = {
     BSP_APP_DEVICE,
     BSP_APP_USER,
     BSP_MSG_PASSPHRASE,
+    BSP_MSG_SYNC_BIBLEABBREV,
     BSP_MSG_SYNC_DOMAIN,
     BSP_MSG_SYNC_GROUP,
-    BSP_MSG_SYNC_BIBLEABBREV,
     BSP_MSG_SYNC_ALTVERSE,
     BSP_MSG_SYNC_VERSE		// last: could go overly long, risk cutoff.
 };
+#define	CHAT_OUTBOUND_INDEX	7	// index in list above.
+
+static int outbound_fill_count[5] =
+{
+	0,				// unused
+	BSP_FIELDS_XMIT_ANNOUNCE,
+	BSP_FIELDS_XMIT_SYNC,
+	BSP_FIELDS_XMIT_ANNOUNCE,	// beacon identical to announce
+	BSP_FIELDS_XMIT_CHAT
+};
+
+static string chat_field = BSP_MSG_CHAT;	// for referential substitution.
 
 // BibleSync class constructor.
 // args identify the user of the class, by application, version, and user.
@@ -368,7 +392,9 @@ int BibleSync::ReceiveInternal()
 				   ? "sync"
 				   : ((bsp.msg_type == BSP_BEACON)
 				      ? "beacon"
-				      : "*???*"))),
+				      : ((bsp.msg_type == BSP_CHAT)
+					 ? "chat"
+					 : "*???*")))),
 		 uuid_dump_string,
 		 bsp.num_packets, bsp.index_packet,
 		 bsp.body);
@@ -378,13 +404,15 @@ int BibleSync::ReceiveInternal()
 	    (*nav_func)('E', EMPTY,
 			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 			BSP + _("bad magic"), dump);
-	else if (bsp.version != BSP_PROTOCOL)
+	else if ((bsp.version != BSP_PROTOCOL) && (bsp.version != BSP_OLD_PROTOCOL))
+	    // we are fine with previous v2 protocol that lacks chat messages.
 	    (*nav_func)('E', EMPTY,
 			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 			BSP + _("bad protocol version"), dump);
 	else if ((bsp.msg_type != BSP_ANNOUNCE) &&
 		 (bsp.msg_type != BSP_SYNC) &&
-		 (bsp.msg_type != BSP_BEACON))
+		 (bsp.msg_type != BSP_BEACON) &&
+		 (bsp.msg_type != BSP_CHAT))
 	    (*nav_func)('E', EMPTY,
 			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 			BSP + _("bad msg type"), dump);
@@ -444,13 +472,16 @@ int BibleSync::ReceiveInternal()
 	    else
 	    {
 		// verify minimum body content.
-		int field_count = ((bsp.msg_type == BSP_SYNC)
-				   ? BSP_FIELDS_RECV_SYNC
-				   : BSP_FIELDS_RECV_ANNOUNCE);	// or beacon.
+		int field_count = inbound_required_count[bsp.msg_type];
 
 		for (int i = 0; i < field_count; ++i)
 		{
-		    if (content.find(inbound_required[i]) == content.end())
+		    string &locator = (((bsp.msg_type == BSP_CHAT) &&
+					(i == CHAT_INBOUND_INDEX))
+				       ? chat_field
+				       : inbound_required[i]);
+
+		    if (content.find(locator) == content.end())
 		    {
 			ok_so_far = false;
 			string info = BSP + _("missing required header ")
@@ -527,7 +558,25 @@ int BibleSync::ReceiveInternal()
 			version = (string)"(version?)";
 		
 		    // generally good, so extract interesting content.
-		    if (bsp.msg_type == BSP_SYNC)
+		    if (bsp.msg_type == BSP_CHAT)
+		    {
+			alt = BSP
+			    + content.find(BSP_APP_USER)->second
+			    + _(" at ")
+			    + source_addr
+			    + _(" says: ")
+			    + content.find(BSP_MSG_CHAT)->second;
+
+			info = (string)"chat: "
+			    + content.find(BSP_APP_USER)->second
+			    + " @ " + source_addr;
+
+			cmd = ((passphrase ==
+				content.find(BSP_MSG_PASSPHRASE)->second)
+			       ? 'C'	// chat message
+			       : 'M');	// mismatch
+		    }
+		    else if (bsp.msg_type == BSP_SYNC)
 		    {
 			// regular synchronized navigation
 			bible  = content.find(BSP_MSG_SYNC_BIBLEABBREV)->second;
@@ -745,7 +794,8 @@ BibleSync::TransmitInternal(char message_type,
 
     if ((message_type != BSP_ANNOUNCE) &&
 	(message_type != BSP_SYNC) &&
-	(message_type != BSP_BEACON))
+	(message_type != BSP_BEACON) &&
+	(message_type != BSP_CHAT))
 	return BSP_XMIT_BAD_TYPE;
 
     if ((mode == BSP_MODE_AUDIENCE) &&
@@ -757,18 +807,25 @@ BibleSync::TransmitInternal(char message_type,
     string body = "";
 
     // all name/value pairs.
-    content[BSP_APP_NAME]             = application;
-    content[BSP_APP_VERSION]          = version;
-    content[BSP_APP_USER]             = user;
-    content[BSP_APP_DEVICE]           = device;
-    content[BSP_APP_OS]               = BSP_OS;
-    content[BSP_APP_INSTANCE_UUID]    = uuid_string;
-    content[BSP_MSG_SYNC_BIBLEABBREV] = bible;
-    content[BSP_MSG_SYNC_VERSE]       = ref;
-    content[BSP_MSG_SYNC_ALTVERSE]    = alt;
-    content[BSP_MSG_SYNC_GROUP]       = group;
-    content[BSP_MSG_SYNC_DOMAIN]      = domain;
-    content[BSP_MSG_PASSPHRASE]       = passphrase;
+    content[BSP_APP_NAME]                 = application;
+    content[BSP_APP_VERSION]              = version;
+    content[BSP_APP_USER]                 = user;
+    content[BSP_APP_DEVICE]               = device;
+    content[BSP_APP_OS]                   = BSP_OS;
+    content[BSP_APP_INSTANCE_UUID]        = uuid_string;
+    if (message_type != BSP_CHAT)
+	content[BSP_MSG_SYNC_BIBLEABBREV] = bible;
+    else {
+	content[BSP_MSG_CHAT]	          = bible;	// overload.
+	// innoculate chat content against internal \n.
+	for (char *chase = (char *)bible.c_str(); chase = strchr(chase, '\n'); ++chase)
+	    *chase = '\t';
+    }
+    content[BSP_MSG_SYNC_VERSE]           = ref;
+    content[BSP_MSG_SYNC_ALTVERSE]        = alt;
+    content[BSP_MSG_SYNC_GROUP]           = group;
+    content[BSP_MSG_SYNC_DOMAIN]          = domain;
+    content[BSP_MSG_PASSPHRASE]           = passphrase;
 
     // header.
     bsp.magic = BSP_MAGIC;
@@ -780,13 +837,15 @@ BibleSync::TransmitInternal(char message_type,
     memset((void *)&bsp.reserved, 0, BSP_RES_SIZE);
 
     // body prep.
-    int field_count = ((message_type == BSP_SYNC)
-		       ? BSP_FIELDS_XMIT_SYNC
-		       : BSP_FIELDS_XMIT_ANNOUNCE);	// or beacon.
+    int field_count = outbound_fill_count[message_type];
 
     for (int i = 0; i < field_count; ++i)
     {
-	body += outbound_fill[i] + "=" + content[outbound_fill[i]] + "\n";
+	string &filler = (((message_type == BSP_CHAT) &&
+			   (i == CHAT_OUTBOUND_INDEX))
+			  ? chat_field
+			  : outbound_fill[i]);
+	body += filler + "=" + content[filler] + "\n";
     }
 
     // ship it.
@@ -795,6 +854,7 @@ BibleSync::TransmitInternal(char message_type,
 				 BSP_HEADER_SIZE + body.length());
 
     // force last == newline: attempt to preserve body format when long.
+    // (cuts off excessively long verse references and chat messages.)
     ((unsigned char*)&bsp)[BSP_MAX_SIZE-1] = '\n';
 
     BibleSync_xmit_status retval;

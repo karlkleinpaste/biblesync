@@ -71,18 +71,22 @@
 //		   bible, ref, alt, group, domain as arrived.
 //		   info + dump available.
 //		3. 'M' (mismatch) against passphrase or mode or listen status.
-//		   info == "announce" or "sync" or "beacon" (+ user @ [ipaddr])
+//		   info == "announce"/"sync"/"beacon"/"chat" (+ user @ [ipaddr])
 //			   sync:     bible, ref, alt, group, domain as arrived.
 //			   announce: presence message in alt.
 //			      also, individual elements are also available:
 //			      overload: bible   ref       group    domain
 //					user    [ipaddr]  app+ver  device
+//			   chat:     message in alt.
 //		   dump available.
 //		4. 'S' (new speaker)
 //		   param overload as above. alt unused. see listenToSpeaker().
 //		5. 'D' (dead speaker)
 //		   opposite of new speaker. only param is speakerkey.
-//		6. 'E' (error) for network errors & malformed packets.
+//		6. 'C' (chat)
+//		   human chat message to be displayed to user.
+//		   message in alt.
+//		7. 'E' (error) for network errors & malformed packets.
 //		   only info + dump are useful.
 //
 // - get current mode.
@@ -121,6 +125,10 @@
 // - allow another speaker to drive us
 //	void listenToSpeaker(bool listen, string speakerkey)
 //		say yes/no to listening.
+//
+// - send a human chat message to others listening.
+//	BibleSync_xmit_status retval = Chat("your message for others here");
+//	  sends your message to all other listeners. not restricted to Speakers.
 //
 // Receive() USAGE NOTE:
 // the application must call BibleSync::Receive(YourBibleSyncObjPtr)
@@ -221,13 +229,15 @@ typedef void (*BibleSync_navigate)(char,   string,
 #define	BSP_MAX_PAYLOAD	(BSP_MAX_SIZE - BSP_HEADER_SIZE)
 
 // message indications
-#define	BSP_MAGIC	htonl(0x409CAF11)
-#define	BSP_PROTOCOL	2
+#define	BSP_MAGIC		htonl(0x409CAF11)
+#define	BSP_PROTOCOL		3
+#define	BSP_OLD_PROTOCOL	2
 
 // message types
 #define	BSP_ANNOUNCE	1	// presence announcement.
 #define	BSP_SYNC	2	// navigation synchronization.
 #define	BSP_BEACON	3	// speaker availability beacon.
+#define	BSP_CHAT	4	// human chat message.
 // beacon packet is identical to presence announcement except for type.
 
 // beacon constants
@@ -247,11 +257,15 @@ typedef void (*BibleSync_navigate)(char,   string,
 #define BSP_MSG_SYNC_BIBLEABBREV	"msg.sync.bibleAbbrev"	// req'd
 #define BSP_MSG_SYNC_GROUP		"msg.sync.group"	// req'd
 #define BSP_MSG_PASSPHRASE		"msg.sync.passPhrase"	// req'd
+#define BSP_MSG_CHAT			"msg.chat"		// req'd for BSP_CHAT
 
 // required number of fields to send (out) or verify (in).
 #define	BSP_FIELDS_RECV_ANNOUNCE	4
+#define	BSP_FIELDS_RECV_CHAT		5
 #define	BSP_FIELDS_RECV_SYNC		8
+
 #define	BSP_FIELDS_XMIT_ANNOUNCE	7
+#define	BSP_FIELDS_XMIT_CHAT		8
 #define	BSP_FIELDS_XMIT_SYNC		12
 
 #ifdef linux
@@ -403,6 +417,12 @@ public:
 					  string domain = "BIBLE-VERSE")
     {
 	return TransmitInternal(BSP_SYNC, bible, ref, alt, group, domain);
+    }
+
+    // simple chat interface
+    inline BibleSync_xmit_status Chat(string message)
+    {
+	return TransmitInternal(BSP_CHAT, message);
     }
 
     // set privacy using TTL 0 in personal mode.
