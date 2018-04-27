@@ -560,12 +560,12 @@ int BibleSync::ReceiveInternal()
 		    // generally good, so extract interesting content.
 		    if (bsp.msg_type == BSP_CHAT)
 		    {
-			alt = BSP
-			    + content.find(BSP_APP_USER)->second
-			    + _(" at ")
-			    + source_addr
-			    + _(" says: ")
-			    + content.find(BSP_MSG_CHAT)->second;
+			bible  = content.find(BSP_APP_USER)->second;
+			ref    = source_addr;
+			group  = content.find(BSP_APP_NAME)->second
+			    + " " + version;
+			domain = content.find(BSP_APP_DEVICE)->second;
+			alt    = content.find(BSP_MSG_CHAT)->second;
 
 			info = (string)"chat: "
 			    + content.find(BSP_APP_USER)->second
