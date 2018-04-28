@@ -8,7 +8,7 @@
 .\" make back to the origin repository.  These obligations are non-
 .\" binding for public domain software, but they are to be seriously
 .\" handled nonetheless.
-.TH BIBLESYNC 7 2014-10-31 "Linux" "Linux Programmer's Manual"
+.TH BIBLESYNC 7 2018-04-27 "Linux" "Linux Programmer's Manual"
 .SH NAME
 biblesync \- multicast navigation synchronization in Bible programs
 .SH SYNOPSIS
@@ -46,12 +46,6 @@ biblesync \- multicast navigation synchronization in Bible programs
 .BI "    " N_BSP_XMIT
 .br
 .BI "} BibleSync_xmit_status;"
-.sp
-.BI "#define BSP_ANNOUNCE   1"
-.br
-.BI "#define BSP_SYNC       2"
-.br
-.BI "#define BSP_BEACON     3"
 .sp
 .BI "typedef void (*BibleSync_navigate)(char " cmd ", string " speakerkey ","
 .br
@@ -112,7 +106,7 @@ A single user may have multiple programs, or multiple computers/devices,
 all of which he wishes to follow along together.
 
 Similarly, a group of people working closely together, such as
-translators, can stay together as they work.
+translators or a group Bible study, can stay together as they work.
 
 In an instructional motif,
 .I BibleSync
@@ -152,12 +146,12 @@ transmission of navigation event packets on the user's part.
 
 Transmitters (Personal and Speaker modes) issue availability beacons every
 10 seconds.  Received beacons for previously-unknown Speakers are handed
-up to the application.  These beacons provide for receivers (Personal and
-Audience modes) to maintain a managed list of available Speakers.
-Furthermore, when a transmitter ceases to issue beacons, its presence in
-the list of available Speakers is aged out until being removed after 30
-seconds of beacon silence.  The application is again informed when a
-Speaker goes dead.
+up to the application as "new Speaker" events.  These beacons provide for
+receivers (Personal and Audience modes) to maintain a managed list of
+available Speakers.  Furthermore, when a transmitter ceases to issue
+beacons, its presence in the list of available Speakers is aged out until
+being removed after 30 seconds of beacon silence.  The application is
+again informed as a Speaker ages out with a "dead Speaker" event.
 
 Default listening behavior is that the first Speaker heard via beacon is
 marked for listening.  Other transmitters claiming Speaker status via
@@ -193,9 +187,6 @@ put to greater use in future revisions of the protocol.
 
 .I BibleSync
 transmits no packet when the application leaves the conversation.
-
-Only the 3 packet types BSP_ANNOUNCE, BSP_SYNC, and BSP_BEACON are defined
-in the protocol.
 .SH PUBLIC INTERFACE
 .SS Object creation
 The application must create a single BibleSync object, identifying the
@@ -258,7 +249,7 @@ Aside from default listen behavior detailed above, the application
 specifically asks to listen or not to listen to specific Speakers.  The
 key is as provided during the notification of a new Speaker.
 .SH RECEIVE USE CASES
-There are 6 values for the
+There are 7 values for the
 .I cmd
 parameter of the
 .I nav_func.
@@ -298,8 +289,9 @@ holds the UUID key of a previously-identified application which is no
 longer a candidate for listening.
 .SS 'C'
 Chat.
+Message text is in
 .I alt
-contains the message text.
+and other parameters are overloaded as per announce, above.
 .SS 'M'
 Mismatch.  The incoming event packet is mismatched, either against the
 current passphrase or for a navigation synchronization packet when

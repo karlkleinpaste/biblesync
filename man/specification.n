@@ -64,8 +64,6 @@ on a single host, a privacy mode is available by setting multicast TTL to
 0, so the user's entirely internal navigation is not also heard over the
 wire.
 
-
-
 .ti 0
 Packet Structure
 
@@ -128,10 +126,10 @@ interaction.
 
 The speaker beacon packet is identical to the presence announcement except
 for having message type 3, and is sent by transmitting applications every
-10 seconds.
+10 seconds. Beacon silence for 30 seconds indicates a dead Speaker.
 
-The chat message packet contains only 1 field beyond those found in
-announce and beacon, which is the message content.
+The chat message packet contains only 1 field, the message content, beyond
+those found in announce and beacon.
 
 .ti 0
 Speaker Beacons
@@ -185,7 +183,7 @@ distinction means that the last pair also must end in a newline.
 
 Continuation lines are not supported.
 
-There are 12 names defined for use in the body.  The application may
+There are 13 names defined for use in the body.  The application may
 provide any others its designer finds useful, but these names define the
 protocol's interoperability.
 
@@ -380,7 +378,7 @@ Real-world example, navigation synchronization, using all defined names:
     #pkt: 1
     pkt index: 0
     app.name=Xiphos
-    app.version=4.1.0
+    app.version=4.1.1
     app.inst.uuid=49b387bd-6324-4a2e-871a-4b24e065bff7
     app.os=Linux
     app.device=x86_64: Linux @ awol.kleinpaste.org

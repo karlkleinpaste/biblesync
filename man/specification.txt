@@ -50,7 +50,7 @@
        available by setting multicast TTL to 0, so the user’s entirely
        internal navigation is not also heard over the wire.
 
-
+    Packet Structure
 
 
 
@@ -63,8 +63,6 @@
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
-
-    Packet Structure
 
        Payload maximum length is 1280 bytes.  Within this, the first 32
        bytes are a header identifying the sender’s protocol version, message
@@ -112,6 +110,8 @@
 
     Packet Type Overview
 
+       The presence packet announces the application’s participation in the
+       conversation.  It is non-essential, but useful if the application
 
 
 
@@ -124,8 +124,6 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-       The presence packet announces the application’s participation in the
-       conversation.  It is non-essential, but useful if the application
        designer chooses to make it visible to the user.
 
        The navigation packet specifies a Bible name and a reference.  It may
@@ -138,10 +136,11 @@
 
        The speaker beacon packet is identical to the presence announcement
        except for having message type 3, and is sent by transmitting
-       applications every 10 seconds.
+       applications every 10 seconds. Beacon silence for 30 seconds
+       indicates a dead Speaker.
 
-       The chat message packet contains only 1 field beyond those found in
-       announce and beacon, which is the message content.
+       The chat message packet contains only 1 field, the message content,
+       beyond those found in announce and beacon.
 
     Speaker Beacons
 
@@ -172,6 +171,7 @@
        ignored.  For example, if a proper speaker and an interloper are both
        claiming speaker status by sending beacons, and a newly-started
        application begins to listen, it may first hear the interloper’s
+       beacon and begin listening to it.  The user must be able to consult a
 
 
 
@@ -184,7 +184,6 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-       beacon and begin listening to it.  The user must be able to consult a
        list of potential speakers and pick the one(s) actually needed.
 
        Beacons must be sent at least every 10 seconds.  Receivers must track
@@ -207,7 +206,7 @@
 
        Continuation lines are not supported.
 
-       There are 12 names defined for use in the body.  The application may
+       There are 13 names defined for use in the body.  The application may
        provide any others its designer finds useful, but these names define
        the protocol’s interoperability.
 
@@ -232,6 +231,7 @@
 
         5. app.version
 
+           Optional; recommended.  The application’s version stamp.
 
 
 
@@ -243,8 +243,6 @@
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
-
-           Optional; recommended.  The application’s version stamp.
 
         6. app.os
 
@@ -293,6 +291,8 @@
            no specific need for this, and may ignore it on navigation
            receipt if such values have no meaning.
 
+       12. msg.sync.domain
+
 
 
     Stergiou et al                                                 [Page 5]
@@ -303,8 +303,6 @@
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
-
-       12. msg.sync.domain
 
            Required in navigation.  This field has a fixed value of "BIBLE-
            VERSE" but its use will be expanded in future revisions.
@@ -352,6 +350,8 @@
            app.name=TestBibleApp
            app.inst.uuid=00112233-4455-6677-8899-aabbccddeeff
            app.user=John Doe (jdoe)
+           msg.sync.passPhrase=qwerty
+
 
 
 
@@ -363,8 +363,6 @@
 
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
-
-           msg.sync.passPhrase=qwerty
 
        Beacon is identical to presence announcement except for being type 0x03.
 
@@ -412,6 +410,8 @@
            version: 0x03
            type: 0x02 (sync)
            uuid: 49b387bd-6324-4a2e-871a-4b24e065bff7
+           #pkt: 1
+           pkt index: 0
 
 
 
@@ -424,10 +424,8 @@
     RFC -BSP-              BibleSync Protocol - DRAFT           15 June 2014
 
 
-           #pkt: 1
-           pkt index: 0
            app.name=Xiphos
-           app.version=4.1.0
+           app.version=4.1.1
            app.inst.uuid=49b387bd-6324-4a2e-871a-4b24e065bff7
            app.os=Linux
            app.device=x86_64: Linux @ awol.kleinpaste.org
@@ -468,6 +466,8 @@
        William Mills <read_frequent@hotmail.com>
        Tim Morton <morton@bibleanalyzer.com>
        Craig Rairdin <craigr@laridian.com>
+
+
 
 
 
