@@ -956,178 +956,61 @@ void BibleSync::clearSpeakers()
 
 #ifdef linux
 
-// routines below imported from the net as workable examples.
 // in order to do multicast setup, we require the address
-// of the interface that has our default route.  code below
-// finds the name of that interface.  then getifaddrs(3)
-// code (taken from its man page) lets us match that name
-// against an entry that has the address we need.
+// of the interface that has our default route.
+// get_default_if_name() reads /proc/net/route to find that interface.
+// then getifaddrs(3) code (taken from its man page) lets us
+// match that name against an entry that has the address we need.
+// this entire methodology is 100 times simpler than the former
+// rtnetlink-driven nightmare
 
-// extra includes needed only for the
-// route & gateway discovery code below.
+// lines in /proc/net/route consist of
+// IFACE \t DESTINATION \t GATEWAY \t FLAGS \t ...
+// DESTINATION is an 8-byte hex value (string), so look for \t00000000\t.
+
+#define	PROC_ROUTE	"/proc/net/route"
 
 #include <net/if.h>
-#include <linux/rtnetlink.h>
+#include <netdb.h>
+#include <ifaddrs.h>
 
-struct route_info
+int BibleSync::get_default_if_name(char *name)
 {
-    struct in_addr dstAddr;
-    struct in_addr srcAddr;
-    struct in_addr gateWay;
-    char ifName[IF_NAMESIZE];
-};
+    int found = 0;
+    char line[256], *field;
+    FILE *proc_route;
 
-int BibleSync::readNlSock(int sockFd,
-			  char *bufPtr,
-			  size_t buf_size,
-			  unsigned int seqNum,
-			  unsigned int pId)
-{
-    struct nlmsghdr *nlHdr;
-    int readLen = 0, msgLen = 0;
-
-    do
-    {
-	if((readLen = recv(sockFd, bufPtr, buf_size - msgLen, 0)) < 0)
-	{
-	    return -1;
-	}
-
-	nlHdr = (struct nlmsghdr *)bufPtr;
-
-	if((NLMSG_OK(nlHdr, readLen) == 0) || (nlHdr->nlmsg_type == NLMSG_ERROR))
-	{
-	    return -1;
-	}
-
-	/* check if last message */
-	if(nlHdr->nlmsg_type == NLMSG_DONE)
-	{
-	    break;
-	}
-	else
-	{
-	    /* else move pointer to buffer appropriately */
-	    bufPtr += readLen;
-	    msgLen += readLen;
-	}
-
-	/* check if multi part message */
-	if((nlHdr->nlmsg_flags & NLM_F_MULTI) == 0)
-	{
-	    /* return if its not */
-	    break;
-	}
-    }
-    while((nlHdr->nlmsg_seq != seqNum) || (nlHdr->nlmsg_pid != pId));
-
-    return msgLen;
-}
-
-int BibleSync::parseRoutes(struct nlmsghdr *nlHdr, struct route_info *rtInfo)
-{
-    struct rtmsg *rtMsg;
-    struct rtattr *rtAttr;
-    int rtLen;
-
-    rtMsg = (struct rtmsg *)NLMSG_DATA(nlHdr);
-
-    /* if route is not AF_INET or not in main table, return. */
-    if((rtMsg->rtm_family != AF_INET) || (rtMsg->rtm_table != RT_TABLE_MAIN))
-	return -1;
-
-    rtAttr = (struct rtattr *)RTM_RTA(rtMsg);
-    rtLen = RTM_PAYLOAD(nlHdr);
-
-    for(; RTA_OK(rtAttr,rtLen); rtAttr = RTA_NEXT(rtAttr,rtLen))
-    {
-	switch(rtAttr->rta_type)
-	{
-	case RTA_OIF:
-	    if_indextoname(*(int *)RTA_DATA(rtAttr), rtInfo->ifName);
-	    break;
-
-	case RTA_GATEWAY:
-	    memcpy(&rtInfo->gateWay, RTA_DATA(rtAttr), sizeof(rtInfo->gateWay));
-	    break;
-
-	case RTA_PREFSRC:
-	    memcpy(&rtInfo->srcAddr, RTA_DATA(rtAttr), sizeof(rtInfo->srcAddr));
-	    break;
-
-	case RTA_DST:
-	    memcpy(&rtInfo->dstAddr, RTA_DATA(rtAttr), sizeof(rtInfo->dstAddr));
-	    break;
-	}
-    }
-
-    return 0;
-}
-
-int BibleSync::get_default_if_name(char *name, socklen_t size)
-{
-    int found_default = 0;
-
-    struct nlmsghdr *nlMsg;
-    //struct rtmsg *rtMsg;
-    struct route_info route_info;
-    char msgBuf[4096];
-
-    int sock, len, msgSeq = 0;
-
-    name[1] = '\0';	// pre-set, in case of error.
-
-    if((sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE)) < 0)
+    if ((proc_route = fopen(PROC_ROUTE, "r")) == NULL)
     {
 	name[0] = 'x';
 	return -1;
     }
 
-    memset(msgBuf, 0, sizeof(msgBuf));
-
-    nlMsg = (struct nlmsghdr *)msgBuf;
-    //rtMsg = (struct rtmsg *)NLMSG_DATA(nlMsg);
-
-    nlMsg->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
-    nlMsg->nlmsg_type = RTM_GETROUTE;
-
-    nlMsg->nlmsg_flags = NLM_F_DUMP | NLM_F_REQUEST;
-    nlMsg->nlmsg_seq = msgSeq++;
-    nlMsg->nlmsg_pid = getpid();
-
-    if(send(sock, nlMsg, nlMsg->nlmsg_len, 0) < 0)
+    while (fgets(line, 255, proc_route) != NULL)
     {
-	name[0] = 'y';
-	return -1;
-    }
+	if ((field = strchr(line, '\t')) == NULL)
+	    continue;			// invalid line?
 
-    if((len = readNlSock(sock, msgBuf, sizeof(msgBuf), msgSeq, getpid())) < 0)
-    {
-	name[0] = 'z';
-	return -1;
-    }
-
-    for(; NLMSG_OK(nlMsg,len); nlMsg = NLMSG_NEXT(nlMsg,len))
-    {
-	memset(&route_info, 0, sizeof(route_info));
-	if ( parseRoutes(nlMsg, &route_info) < 0 )
-	    continue;			// don't check: not set up
-
-	if (strstr((char *)inet_ntoa(route_info.dstAddr), "0.0.0.0"))
+	if (strncmp(field, "\t00000000\t", 10) == 0)
 	{
-	    // copy it over
-	    strcpy(name, route_info.ifName);
-	    found_default = 1;
+	    found = 1;
+	    *field = '\0';
+	    strcpy(name, line);
 	    break;
 	}
     }
+    fclose(proc_route);
 
-    close(sock);
-    return found_default;
+    if (!found)
+    {
+	// no default route?  fallback: we're holding a valid last line.
+	// so we arbitrarily choose whatever was found there.
+	*field = '\0';
+	strcpy(name, line);
+    }
+
+    return 0;
 }
-
-#include <netdb.h>
-#include <ifaddrs.h>
 
 void BibleSync::InterfaceAddress()
 {
@@ -1137,7 +1020,7 @@ void BibleSync::InterfaceAddress()
 
     char gw_if[IF_NAMESIZE];	// default gateway interface.
 
-    (void)get_default_if_name(gw_if, 100);
+    (void)get_default_if_name(gw_if);
 
     // if no error, search the interface list for that address.
     if (gw_if[0] != '\0')
@@ -1169,19 +1052,23 @@ void BibleSync::InterfaceAddress()
 
 // Solaris & BSD.
 
-//
 // this seeming grotesqueness is in fact the most general command
 // that could be found which finds the interface holding the default
 // route and then collects that interface's address.  handles both
-// solaris and bsd.  in fact, it suffices for linux as well, but
-// we're leaving the existing code above in place for linux, if for
-// no other reason than that it's more likely that someone will
-// foolishly screw up ifconfig output format in the linux world.
-//
-#define	ADDRESS	"PATH=/sbin:/usr/sbin:/bin:/usr/bin " \
-		"ifconfig \"`netstat -rn | egrep '^0\\.0\\.0\\.0|^default' | " \
-		"tr ' ' '\\n' | sed -e '/^$/d' | tail -1`\" | grep 'inet ' | " \
+// solaris and bsd.  also an instance for linux using "ip", in case
+// whoever builds this doesn't like depending on /proc/net/route.
+
+#ifdef linux
+#define	ADDRESS	"PATH=/sbin:/usr/sbin:/bin:/usr/bin "						\
+		"ip address show dev `ip route | egrep '^(default|0\\.0\\.0\\.0)' | "		\
+		"head -1 | sed 's/dev /DEV-/' | tr ' ' '\\n' | grep DEV | sed s/DEV-//` | "	\
+		"grep 'inet ' | tr '/ ' '\\n\\n' | grep '^[0-9.][0-9.]*' | head -1 | tr -d '\\n'"
+#else
+#define	ADDRESS	"PATH=/sbin:/usr/sbin:/bin:/usr/bin "				\
+		"ifconfig \"`netstat -rn | egrep '^0\\.0\\.0\\.0|^default' | "	\
+		"tr ' ' '\\n' | sed -e '/^$/d' | tail -1`\" | grep 'inet ' | "	\
 		"tr ' ' '\\n' | grep '^[0-9.][0-9.]*$' | head -1 | tr -d '\\n'"
+#endif
 
 void BibleSync::InterfaceAddress()
 {

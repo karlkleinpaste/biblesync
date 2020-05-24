@@ -380,10 +380,7 @@ private:
 
 #ifdef linux
     // network self-analysis, borrowed from the net.
-    int get_default_if_name(char *name, socklen_t size);
-    int parseRoutes(struct nlmsghdr *nlHdr, struct route_info *rtInfo);
-    int readNlSock(int sockFd, char *bufPtr, size_t buf_size,
-		   unsigned int seqNum, unsigned int pId);
+    int get_default_if_name(char *name);
 #else
     // no other support routines needed for Windows/Solaris/BSD.
 #endif /* linux */
