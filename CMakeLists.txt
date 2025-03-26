@@ -8,7 +8,7 @@
 PROJECT(libbiblesync CXX)
 SET(BIBLESYNC_VERSION 2.1.0)
 # A required CMake line
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 # Where our custom Find* files are located
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
