@@ -816,10 +816,10 @@ BibleSync::TransmitInternal(char message_type,
     if (message_type != BSP_CHAT)
 	content[BSP_MSG_SYNC_BIBLEABBREV] = bible;
     else {
-	content[BSP_MSG_CHAT]	          = bible;	// overload.
 	// innoculate chat content against internal \n.
 	for (char *chase = (char *)bible.c_str(); chase = strchr(chase, '\n'); ++chase)
 	    *chase = '\t';
+	content[BSP_MSG_CHAT]	          = bible;	// overload.
     }
     content[BSP_MSG_SYNC_VERSE]           = ref;
     content[BSP_MSG_SYNC_ALTVERSE]        = alt;
