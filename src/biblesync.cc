@@ -377,6 +377,14 @@ int BibleSync::ReceiveInternal()
     // whether it passes muster for BibleSync is another matter.
     while ((recv_size = InitSelectRead(dump, &source, &bsp)) > 0)
     {
+	if (recv_size < BSP_HEADER_SIZE)
+	{
+	    (*nav_func)('E', EMPTY,
+			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+			BSP + _("packet too short"), dump);
+	    continue;
+	}
+
 	((char*)&bsp)[recv_size] = '\0';	// as an ordinary C string
 
 	// dump content into something humanly useful.
