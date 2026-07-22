@@ -65,6 +65,9 @@ popd
 %{_mandir}/man7/biblesync.7*
 
 %changelog
+* Wed Jul 22 2026 Karl Kleinpaste <karl@kleinpaste.org> - 2.2.0-1
+- New release 2.2.0 after merge 4 security/sanity fixes (Acts1632@github).
+
 * Fri Oct 31 2014 Karl Kleinpaste <karl@kleinpaste.org> - 1.1.1-1
 - Anti-spoof improvements.
 
