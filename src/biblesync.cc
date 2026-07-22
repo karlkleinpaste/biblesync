@@ -985,8 +985,10 @@ void BibleSync::clearSpeakers()
 int BibleSync::get_default_if_name(char *name)
 {
     int found = 0;
-    char line[256], *field;
+    char line[256], *field = NULL;
     FILE *proc_route;
+
+    line[0] = '\0';
 
     if ((proc_route = fopen(PROC_ROUTE, "r")) == NULL)
     {
@@ -1009,12 +1011,14 @@ int BibleSync::get_default_if_name(char *name)
     }
     fclose(proc_route);
 
-    if (!found)
+    if (!found && field != NULL && line[0] != '\0')
     {
-	// no default route?  fallback: we're holding a valid last line.
-	// so we arbitrarily choose whatever was found there.
 	*field = '\0';
 	strcpy(name, line);
+    }
+    else if (!found)
+    {
+	name[0] = '\0';
     }
 
     return 0;
