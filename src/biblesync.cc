@@ -561,7 +561,10 @@ int BibleSync::ReceiveInternal()
 			info = "<>";
 		    char cmd;
 
-		    string version = content.find(BSP_APP_VERSION)->second;
+		    string version;
+		    auto ver_it = content.find(BSP_APP_VERSION);
+		    if (ver_it != content.end())
+			version = ver_it->second;
 		    if (version == "")
 			version = (string)"(version?)";
 		
@@ -572,7 +575,11 @@ int BibleSync::ReceiveInternal()
 			ref    = source_addr;
 			group  = content.find(BSP_APP_NAME)->second
 			    + " " + version;
-			domain = content.find(BSP_APP_DEVICE)->second;
+			{
+			    auto dev_it = content.find(BSP_APP_DEVICE);
+			    if (dev_it != content.end())
+				domain = dev_it->second;
+			}
 			alt    = content.find(BSP_MSG_CHAT)->second;
 
 			info = (string)"chat: "
@@ -589,7 +596,11 @@ int BibleSync::ReceiveInternal()
 			// regular synchronized navigation
 			bible  = content.find(BSP_MSG_SYNC_BIBLEABBREV)->second;
 			ref    = content.find(BSP_MSG_SYNC_VERSE)->second;
-			alt    = content.find(BSP_MSG_SYNC_ALTVERSE)->second;
+			{
+			    auto alt_it = content.find(BSP_MSG_SYNC_ALTVERSE);
+			    if (alt_it != content.end())
+				alt = alt_it->second;
+			}
 			group  = content.find(BSP_MSG_SYNC_GROUP)->second;
 			domain = content.find(BSP_MSG_SYNC_DOMAIN)->second;
 
@@ -631,7 +642,11 @@ int BibleSync::ReceiveInternal()
 			ref    = source_addr;
 			group  = content.find(BSP_APP_NAME)->second
 			    + " " + version;
-			domain = content.find(BSP_APP_DEVICE)->second;
+			{
+			    auto dev_it = content.find(BSP_APP_DEVICE);
+			    if (dev_it != content.end())
+				domain = dev_it->second;
+			}
 
 			alt = BSP
 			    + content.find(BSP_APP_USER)->second
@@ -656,7 +671,11 @@ int BibleSync::ReceiveInternal()
 			ref    = source_addr;
 			group  = content.find(BSP_APP_NAME)->second
 			    + " " + version;
-			domain = content.find(BSP_APP_DEVICE)->second;
+			{
+			    auto dev_it = content.find(BSP_APP_DEVICE);
+			    if (dev_it != content.end())
+				domain = dev_it->second;
+			}
 
 			info = (string)"beacon: "
 			    + content.find(BSP_APP_USER)->second
