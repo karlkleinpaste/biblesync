@@ -253,7 +253,7 @@ string BibleSync::Setup()
 		server.sin_addr.s_addr = INADDR_ANY;
 
 		// make it receive-ready.
-		if (bind(server_fd, (struct sockaddr*)&server,
+		if (::bind(server_fd, (struct sockaddr*)&server,
 			 sizeof(server)) == -1)
 		{
 		    ok_so_far = false;
