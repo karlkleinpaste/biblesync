@@ -988,7 +988,55 @@ void BibleSync::clearSpeakers()
 
 #ifndef WIN32
 
-#ifdef linux
+#if defined(__ANDROID__) || defined(__APPLE__)
+
+// Android & Apple: an app may not read /proc/net/route on Android 10+,
+// and iOS has no shell to ask; getifaddrs(3) names the interfaces
+// directly.  take the first IPv4 interface which is up, multicast-capable
+// and not loopback, preferring Wi-Fi (wlan0 on Android, en0 on an iPhone).
+
+#include <ifaddrs.h>
+#include <net/if.h>
+
+#ifdef __ANDROID__
+#define	WIFI_IF	"wlan0"
+#else
+#define	WIFI_IF	"en0"
+#endif
+
+void BibleSync::InterfaceAddress()
+{
+    // cancel any old interface value.
+    // we must fail with current info, if at all.
+    interface_addr.s_addr = htonl(0x7f000001);	// 127.0.0.1 fallback
+
+    struct ifaddrs *ifaddr, *ifa;
+
+    if (getifaddrs(&ifaddr) == -1)
+	return;
+
+    bool found = false;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+	if ((ifa->ifa_addr == NULL) ||
+	    (ifa->ifa_addr->sa_family != AF_INET) ||
+	    !(ifa->ifa_flags & IFF_UP) ||
+	    !(ifa->ifa_flags & IFF_MULTICAST) ||
+	    (ifa->ifa_flags & IFF_LOOPBACK))
+	    continue;
+
+	if (!found || (strcmp(ifa->ifa_name, WIFI_IF) == 0)) {
+	    interface_addr.s_addr =
+		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+	    found = true;
+	    if (strcmp(ifa->ifa_name, WIFI_IF) == 0)
+		break;
+	}
+    }
+    freeifaddrs(ifaddr);
+    return;
+}
+
+#elif defined(linux)
 
 // in order to do multicast setup, we require the address
 // of the interface that has our default route.
