@@ -321,7 +321,18 @@ void BibleSync::Shutdown()
 // pick the OS' generation flavor.
 void BibleSync::uuid_gen(uuid_t &u)
 {
-#ifndef WIN32
+#if defined(__ANDROID__)
+    // bionic has no libuuid: a random (version 4) uuid from the kernel's pool.
+    unsigned char *b = (unsigned char *)&u;
+    FILE *r = fopen("/dev/urandom", "rb");
+    size_t got = r ? fread(b, 1, 16, r) : 0;
+    if (r)
+	fclose(r);
+    for (; got < 16; ++got)
+	b[got] = (unsigned char)(rand() & 0xff);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+#elif !defined(WIN32)
     uuid_generate(u);
 #else
     UuidCreate(&u);

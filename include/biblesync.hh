@@ -185,7 +185,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#ifdef __ANDROID__
+typedef unsigned char uuid_t[16];	// bionic has no libuuid: see uuid_gen()
+#else
 #include <uuid/uuid.h>
+#endif
 #else
 #define	uuid_t	UUID
 #include <winsock2.h>
