@@ -16,7 +16,15 @@
 #ifndef __BIBLESYNC_HH__
 #define __BIBLESYNC_HH__
 
-#include <libintl.h>
+#if defined(__has_include)
+# if __has_include(<libintl.h>)
+#  include <libintl.h>
+# else
+#  define gettext(x) (x)	// no gettext on Android or iOS
+# endif
+#else
+# include <libintl.h>
+#endif
 #ifndef _
 #define	_(x)	gettext(x)
 #endif
