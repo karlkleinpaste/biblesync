@@ -766,13 +766,9 @@ int BibleSync::InitSelectRead(char *dump,
     struct timeval tv = { 0, 0 };	// select returns immediately
     fd_set read_set;
     int recv_size = 0;
-#ifndef WIN32
-    // yes, really:
-    // linux insists on unsigned int, win32 insists on int.
-    // each complains bitterly of invalid conversion if wrongly used.
-    unsigned
-#endif
-    int source_length = sizeof(*source);
+    // socklen_t is what recvfrom(2) wants everywhere: unsigned int on
+    // glibc, int on bionic and win32 (ws2tcpip.h defines it).
+    socklen_t source_length = sizeof(*source);
 
     strcpy(dump, _("[no dump ready]"));	// initial, pre-read filler
 
