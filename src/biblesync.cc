@@ -253,7 +253,7 @@ string BibleSync::Setup()
 		server.sin_addr.s_addr = INADDR_ANY;
 
 		// make it receive-ready.
-		if (bind(server_fd, (struct sockaddr*)&server,
+		if (::bind(server_fd, (struct sockaddr*)&server,
 			 sizeof(server)) == -1)
 		{
 		    ok_so_far = false;
@@ -321,7 +321,18 @@ void BibleSync::Shutdown()
 // pick the OS' generation flavor.
 void BibleSync::uuid_gen(uuid_t &u)
 {
-#ifndef WIN32
+#if defined(__ANDROID__)
+    // bionic has no libuuid: a random (version 4) uuid from the kernel's pool.
+    unsigned char *b = (unsigned char *)&u;
+    FILE *r = fopen("/dev/urandom", "rb");
+    size_t got = r ? fread(b, 1, 16, r) : 0;
+    if (r)
+	fclose(r);
+    for (; got < 16; ++got)
+	b[got] = (unsigned char)(rand() & 0xff);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+#elif !defined(WIN32)
     uuid_generate(u);
 #else
     UuidCreate(&u);
@@ -766,13 +777,9 @@ int BibleSync::InitSelectRead(char *dump,
     struct timeval tv = { 0, 0 };	// select returns immediately
     fd_set read_set;
     int recv_size = 0;
-#ifndef WIN32
-    // yes, really:
-    // linux insists on unsigned int, win32 insists on int.
-    // each complains bitterly of invalid conversion if wrongly used.
-    unsigned
-#endif
-    int source_length = sizeof(*source);
+    // socklen_t is what recvfrom(2) wants everywhere: unsigned int on
+    // glibc, int on bionic and win32 (ws2tcpip.h defines it).
+    socklen_t source_length = sizeof(*source);
 
     strcpy(dump, _("[no dump ready]"));	// initial, pre-read filler
 
@@ -981,7 +988,55 @@ void BibleSync::clearSpeakers()
 
 #ifndef WIN32
 
-#ifdef linux
+#if defined(__ANDROID__) || defined(__APPLE__)
+
+// Android & Apple: an app may not read /proc/net/route on Android 10+,
+// and iOS has no shell to ask; getifaddrs(3) names the interfaces
+// directly.  take the first IPv4 interface which is up, multicast-capable
+// and not loopback, preferring Wi-Fi (wlan0 on Android, en0 on an iPhone).
+
+#include <ifaddrs.h>
+#include <net/if.h>
+
+#ifdef __ANDROID__
+#define	WIFI_IF	"wlan0"
+#else
+#define	WIFI_IF	"en0"
+#endif
+
+void BibleSync::InterfaceAddress()
+{
+    // cancel any old interface value.
+    // we must fail with current info, if at all.
+    interface_addr.s_addr = htonl(0x7f000001);	// 127.0.0.1 fallback
+
+    struct ifaddrs *ifaddr, *ifa;
+
+    if (getifaddrs(&ifaddr) == -1)
+	return;
+
+    bool found = false;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+	if ((ifa->ifa_addr == NULL) ||
+	    (ifa->ifa_addr->sa_family != AF_INET) ||
+	    !(ifa->ifa_flags & IFF_UP) ||
+	    !(ifa->ifa_flags & IFF_MULTICAST) ||
+	    (ifa->ifa_flags & IFF_LOOPBACK))
+	    continue;
+
+	if (!found || (strcmp(ifa->ifa_name, WIFI_IF) == 0)) {
+	    interface_addr.s_addr =
+		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+	    found = true;
+	    if (strcmp(ifa->ifa_name, WIFI_IF) == 0)
+		break;
+	}
+    }
+    freeifaddrs(ifaddr);
+    return;
+}
+
+#elif defined(linux)
 
 // in order to do multicast setup, we require the address
 // of the interface that has our default route.

@@ -16,7 +16,15 @@
 #ifndef __BIBLESYNC_HH__
 #define __BIBLESYNC_HH__
 
-#include <libintl.h>
+#if defined(__has_include)
+# if __has_include(<libintl.h>)
+#  include <libintl.h>
+# else
+#  define gettext(x) (x)	// no gettext on Android or iOS
+# endif
+#else
+# include <libintl.h>
+#endif
 #ifndef _
 #define	_(x)	gettext(x)
 #endif
@@ -177,7 +185,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#ifdef __ANDROID__
+typedef unsigned char uuid_t[16];	// bionic has no libuuid: see uuid_gen()
+#else
 #include <uuid/uuid.h>
+#endif
 #else
 #define	uuid_t	UUID
 #include <winsock2.h>
