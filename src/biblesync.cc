@@ -18,6 +18,9 @@
 //
 
 #include <biblesync.hh>
+#include <cerrno>
+#include <cstring>
+#include <cstdlib>
 
 using namespace std;
 
@@ -86,6 +89,7 @@ BibleSync::BibleSync(string a, string v, string u)
       receiving(false),
       beacon_countdown(0),
       beacon_count(BSP_BEACON_COUNT),
+      beacon_failed(false),
       mode(BSP_MODE_DISABLE),
       nav_func(NULL),
       passphrase("BibleSync"),
@@ -149,10 +153,12 @@ BibleSync_mode BibleSync::setMode(BibleSync_mode m,
     string result = Setup();
     if (result != "")
     {
+	// (the system's reason for the last failure, with it)
+	string reason = strerror(errno);
 	if (nav_func != NULL)
 	    (*nav_func)('E', EMPTY,
 			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-			BSP + _("network setup errors."), result);
+			BSP + _("network setup errors."), result + ": " + reason);
 	Shutdown();
     }
 
@@ -675,6 +681,13 @@ int BibleSync::ReceiveInternal()
 				content.find(BSP_MSG_PASSPHRASE)->second)
 			       ? 'A'	// presence announcement
 			       : 'M');	// mismatch
+
+			// a newcomer hears nobody until it has their beacons,
+			// and ignores every verse meanwhile: ours goes out at
+			// the end of this Receive() rather than at the next
+			// scheduled time.
+			if ((cmd == 'A') && (speakers.find(pkt_uuid) == speakers.end()))
+			    beacon_countdown = 1;
 		    }
 		    else // bsp.msg_type == BSP_BEACON
 		    {
@@ -698,6 +711,13 @@ int BibleSync::ReceiveInternal()
 			    cmd = ((object == speakers.end())
 				   ? 'S'	// unknown: potential speaker.
 				   : 'x');	// known: don't tell app again.
+
+			    // a newcomer (its first beacon) hears nobody until
+			    // it has their beacons, and ignores every verse
+			    // meanwhile: ours goes out at the end of this
+			    // Receive() rather than at the next scheduled time.
+			    if (cmd == 'S')
+				beacon_countdown = 1;
 
 			    unsigned int old_speakers_size, new_speakers_size;
 			    old_speakers_size = speakers.size();
@@ -896,14 +916,35 @@ BibleSync::TransmitInternal(char message_type,
 	       (struct sockaddr *)&client, sizeof(client)) >= 0)
     {
 	retval = BSP_XMIT_OK;
+	if (message_type == BSP_BEACON)
+	    beacon_failed = false;
+    }
+    else if (message_type == BSP_BEACON)
+    {
+	// a beacon that did not go out (the network napped with the phone,
+	// or is changing): the next is tried as usual rather than everything
+	// shut down, and the app hears once per such spell.
+	retval = BSP_XMIT_FAILED;
+	string reason = strerror(errno);
+	if (!beacon_failed && (nav_func != NULL))
+	    (*nav_func)('E', EMPTY,
+			EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+			BSP + _("Beacon not sent."),
+			_("Unable to multicast") + (string)" (" + reason + ", "
+			+ _("interface") + " " + inet_ntoa(interface_addr) + "); "
+			+ _("trying again at the next beacon."));
+	beacon_failed = true;
     }
     else
     {
 	retval = BSP_XMIT_FAILED;
+	string reason = strerror(errno);	// (before anything else can change it)
 	(*nav_func)('E', EMPTY,
 		    EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 		    BSP + _("Transmit failed.\n"),
-		    _("Unable to multicast; BibleSync is now disabled. "
+		    _("Unable to multicast") + (string)" (" + reason + ", "
+		    + _("interface") + " " + inet_ntoa(interface_addr) + "); "
+		    + _("BibleSync is now disabled. "
 		      "If your network connection changed while this program "
 		      "was active, it may be sufficient to re-enable."));
 	Shutdown();
@@ -998,12 +1039,13 @@ void BibleSync::clearSpeakers()
 #include <ifaddrs.h>
 #include <net/if.h>
 
-#ifdef __ANDROID__
-#define	WIFI_IF	"wlan0"
-#else
-#define	WIFI_IF	"en0"
-#endif
-
+// Android and Apple: the interface a study group is on.  A phone that is
+// the hotspot has two: its uplink (the office Wi-Fi, or cellular) and the
+// one it serves the room from, and the room is where BibleSync belongs.
+// So, in order: a hotspot interface (Apple bridge100; Android ap0, swlan0,
+// or a second wlan), then the Wi-Fi client (Apple en0, Android wlan0), then
+// any other broadcast-capable interface.  Cellular and VPN tunnels are
+// point-to-point and never carry a room; Apple's awdl/llw are peer links.
 void BibleSync::InterfaceAddress()
 {
     // cancel any old interface value.
@@ -1015,21 +1057,35 @@ void BibleSync::InterfaceAddress()
     if (getifaddrs(&ifaddr) == -1)
 	return;
 
-    bool found = false;
+    int best = -1;
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 	if ((ifa->ifa_addr == NULL) ||
 	    (ifa->ifa_addr->sa_family != AF_INET) ||
 	    !(ifa->ifa_flags & IFF_UP) ||
 	    !(ifa->ifa_flags & IFF_MULTICAST) ||
-	    (ifa->ifa_flags & IFF_LOOPBACK))
+	    (ifa->ifa_flags & IFF_LOOPBACK) ||
+	    (ifa->ifa_flags & IFF_POINTOPOINT))
 	    continue;
 
-	if (!found || (strcmp(ifa->ifa_name, WIFI_IF) == 0)) {
+	const char *name = ifa->ifa_name;
+	int score = 1;
+#ifdef __ANDROID__
+	if ((strncmp(name, "ap", 2) == 0) || (strncmp(name, "swlan", 5) == 0))
+	    score = 10;					// the hotspot
+	else if (strncmp(name, "wlan", 4) == 0)
+	    score = 5 + atoi(name + 4);			// wlan0 the client; wlan1, wlan2 a hotspot beside it
+#else
+	if (strncmp(name, "bridge", 6) == 0)
+	    score = 10;					// Personal Hotspot
+	else if (strcmp(name, "en0") == 0)
+	    score = 5;					// Wi-Fi
+	else if ((strncmp(name, "awdl", 4) == 0) || (strncmp(name, "llw", 3) == 0))
+	    continue;
+#endif
+	if (score > best) {
+	    best = score;
 	    interface_addr.s_addr =
 		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
-	    found = true;
-	    if (strcmp(ifa->ifa_name, WIFI_IF) == 0)
-		break;
 	}
     }
     freeifaddrs(ifaddr);
