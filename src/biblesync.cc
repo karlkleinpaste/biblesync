@@ -89,6 +89,7 @@ BibleSync::BibleSync(string a, string v, string u)
       receiving(false),
       beacon_countdown(0),
       beacon_count(BSP_BEACON_COUNT),
+      beacon_multiplier(BSP_BEACON_MULTIPLIER),
       beacon_failed(false),
       beacon_reply(false),
       mode(BSP_MODE_DISABLE),
@@ -532,6 +533,17 @@ int BibleSync::ReceiveInternal()
 		    if (object != speakers.end())
 		    {
 			// is some legit xmitter's UUID being borrowed?
+			// not when the address we know has been silent for as
+			// long as ages a speaker to death by default: it has
+			// a new address (a new DHCP lease, another network
+			// interface), which a long life (setBeaconMultiplier)
+			// would otherwise lock out.
+			if ((object->second.addr != source_addr) &&
+			    ((beacon_count * beacon_multiplier - object->second.countdown)
+			     >= (BSP_BEACON_COUNT * BSP_BEACON_MULTIPLIER)))
+			{
+			    object->second.addr = source_addr;
+			}
 			if (object->second.addr != source_addr)	// spoof?
 			{
 			    // spock: "forbid...forbid!"
@@ -732,7 +744,7 @@ int BibleSync::ReceiveInternal()
 			    // whether previously known or not,
 			    // a beacon (re)starts the aging countdown.
 			    speakers[pkt_uuid].countdown =
-				beacon_count * BSP_BEACON_MULTIPLIER;
+				beacon_count * beacon_multiplier;
 
 			    new_speakers_size = speakers.size();
 

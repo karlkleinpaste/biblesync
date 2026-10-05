@@ -312,7 +312,7 @@ private:
 
     typedef struct _BibleSyncSpeaker {
 	bool      listen;			// nav for this guy?
-	uint8_t   countdown;			// lifetime aging.
+	uint16_t  countdown;			// lifetime aging.
 	string    addr;				// for spoof check.
     } BibleSyncSpeaker;
 
@@ -336,6 +336,7 @@ private:
     // when xmit-capable, we xmit BSP_BEACON every N calls of Receive().
     uint8_t beacon_countdown;	// progress toward our next beacon xmit
     uint8_t beacon_count;	// how many Receive() calls between beacon xmits
+    uint8_t beacon_multiplier;	// how many beacon intervals of silence age a speaker to death
     bool beacon_failed;		// the last beacon did not go out (said once, then quiet until one does)
     bool beacon_reply;		// our next beacon answers a newcomer: it goes out twice
 
@@ -461,6 +462,18 @@ public:
 	if (count > 10) count = 10;
 	if (count < 3)  count = 3;
 	beacon_count = count;
+    }
+
+    // A speaker whose beacons stop is aged to death after this many of
+    // our own beacon intervals.  beacons are multicast, which nobody
+    // resends: where the network loses some, a short life drops speakers
+    // who are still there, and their syncs with them until the next
+    // beacon is heard.  default 3.
+    // value is force-bounded [3..255].
+    inline void setBeaconMultiplier(uint8_t multiplier)
+    {
+	if (multiplier < 3)  multiplier = 3;
+	beacon_multiplier = multiplier;
     }
 
     // set new user name
