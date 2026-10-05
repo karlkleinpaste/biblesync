@@ -75,6 +75,10 @@ Public interface:
 .br
 .BI "string BibleSync::getPassphrase(void);"
 .br
+.BI "string BibleSync::getInterface(void);"
+.br
+.BI "string BibleSync::getCurrentInterface(void);"
+.br
 .BI "BibleSync_xmit_status BibleSync::Transmit(string " bible ", string " ref ", string " alt ","
 .br
 .BI "                                          string " group ", string " domain ");"
@@ -86,6 +90,10 @@ Public interface:
 .BI "bool BibleSync::setPrivate(bool " privacy ");"
 .br
 .BI "void BibleSync::setBeaconCount(uint8_t " count ");"
+.br
+.BI "void BibleSync::setBeaconMultiplier(uint8_t " multiplier ");"
+.br
+.BI "void BibleSync::setRepeat(uint8_t " count ", uint16_t " delay_ms ");"
 .br
 .BI "void BibleSync::setUser(string " user ");"
 .br
@@ -210,6 +218,14 @@ The version string of the library itself is returned.
 .SS getPassphrase
 Intended for use when preparing to enter any active mode, the application
 may request the current passphrase, so as to provide a default.
+.SS getInterface, getCurrentInterface
+getInterface() returns the address of the network interface on which the
+multicast group was joined and from which packets are sent.
+getCurrentInterface() returns the address which would be chosen if
+BibleSync were started now, without changing anything.  When the two
+differ, the network has changed under the running session (a phone has
+moved to another network, say) and only leaving and re-entering the mode
+will be heard.
 .SS Transmit
 The protocol requires all the indicated parameters, but all have defaults
 in
@@ -240,6 +256,28 @@ value is 10. This presumes the application will call Receive() once per
 second. If the application will call Receive() less frequently, divide
 that time (say, 2 seconds) into 10 to get a value (5) to use with this
 call. Use setBeaconCount() prior to enabling Personal or Speaker mode.
+.SS setBeaconMultiplier
+A Speaker whose beacons stop is removed after this many beacon intervals
+of silence; the default is 3, that is, 30 seconds.  Beacons are multicast,
+which the network does not resend.  On a network which loses some, a
+Speaker who is still present is removed after a few lost beacons, and its
+navigation is ignored until its next beacon arrives; a larger value keeps
+it.  The value is bounded to 3..255.  A known Speaker heard from a new
+address is accepted there once its old address has been silent for the
+default 30 calls to Receive(), and is treated as a spoof before that.
+.SS setRepeat
+Navigation is multicast, which the network does not resend, and wireless
+networks lose a share of it.  With setRepeat(), each Transmit() is sent
+.I count
+more times, at least
+.I delay_ms
+milliseconds apart; repeats go out during calls to Receive(), so no more
+often than the application calls it.  Every navigation packet carries a
+sequence number, by which a receiving BibleSync delivers the first copy
+to the application and drops the others.  A further Transmit() while
+repeats are owed sends one of them at once and abandons the rest, so
+that a repeat never arrives after newer navigation.  The default is 0,
+no repeats; the count is bounded to 0..5.
 .SS setUser
 If the application allows the user to set a name via settings dialog,
 setUser() is available to re-assign the associated user name as seen by
