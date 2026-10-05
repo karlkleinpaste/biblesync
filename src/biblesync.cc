@@ -21,6 +21,8 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
+#include <cstdio>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -63,6 +65,7 @@ static string outbound_fill[] = {
     BSP_MSG_SYNC_BIBLEABBREV,
     BSP_MSG_SYNC_DOMAIN,
     BSP_MSG_SYNC_GROUP,
+    BSP_MSG_SYNC_SEQ,
     BSP_MSG_SYNC_ALTVERSE,
     BSP_MSG_SYNC_VERSE		// last: could go overly long, risk cutoff.
 };
@@ -92,6 +95,11 @@ BibleSync::BibleSync(string a, string v, string u)
       beacon_multiplier(BSP_BEACON_MULTIPLIER),
       beacon_failed(false),
       beacon_reply(false),
+      sync_seq(0),
+      repeat_count(0),
+      repeat_delay(0),
+      repeat_remaining(0),
+      repeat_size(0),
       mode(BSP_MODE_DISABLE),
       nav_func(NULL),
       passphrase("BibleSync"),
@@ -322,6 +330,7 @@ void BibleSync::Shutdown()
     server_fd = client_fd = -1;
 
     // internal shutdown.
+    repeat_remaining = 0;
     mode = BSP_MODE_DISABLE;
     nav_func = NULL;
 }
@@ -656,6 +665,21 @@ int BibleSync::ReceiveInternal()
 				  content.find(BSP_MSG_PASSPHRASE)->second))
 			{
 			    cmd = 'N';	// navigation
+
+			    // a repeat of a sync already delivered from this
+			    // speaker (see setRepeat) goes no further.
+			    auto seq_it = content.find(BSP_MSG_SYNC_SEQ);
+			    if (seq_it != content.end())
+			    {
+				uint32_t seq = strtoul(seq_it->second.c_str(), NULL, 10);
+				if (seq != 0)
+				{
+				    if (seq <= object->second.seq)
+					cmd = 'x';	// repeat: don't tell app again.
+				    else
+					object->second.seq = seq;
+				}
+			    }
 			}
 			else
 			{
@@ -751,7 +775,10 @@ int BibleSync::ReceiveInternal()
 			    // record address for first-time-seen beacon,
 			    // for anti-spoof checks in the future.
 			    if (cmd == 'S')
+			    {
 				speakers[pkt_uuid].addr = source_addr;
+				speakers[pkt_uuid].seq = 0;
+			    }
 
 			    if (mode == BSP_MODE_SPEAKER)
 			    {
@@ -790,6 +817,9 @@ int BibleSync::ReceiveInternal()
 	    }
 	}
     }
+
+    // a repeat of our last sync, if one is owed and due.
+    RepeatSync(false);
 
     // beacon-related tasks: others' aging and sending our beacon.
     ageSpeakers();
@@ -885,6 +915,12 @@ BibleSync::TransmitInternal(char message_type,
 	((message_type == BSP_SYNC) || (message_type == BSP_BEACON)))
 	return BSP_XMIT_NO_AUDIENCE_XMIT;
 
+    // a new sync while repeats of the last are owed: one of those goes
+    // first, now, and the rest are forgotten, so that no repeat ever
+    // arrives behind a newer sync.
+    if (message_type == BSP_SYNC)
+	RepeatSync(true);
+
     BibleSyncContent content;
     BibleSyncMessage bsp;
     string body = "";
@@ -909,6 +945,12 @@ BibleSync::TransmitInternal(char message_type,
     content[BSP_MSG_SYNC_GROUP]           = group;
     content[BSP_MSG_SYNC_DOMAIN]          = domain;
     content[BSP_MSG_PASSPHRASE]           = passphrase;
+    if (message_type == BSP_SYNC)
+    {
+	char seq[16];
+	snprintf(seq, sizeof(seq), "%u", (unsigned int)++sync_seq);
+	content[BSP_MSG_SYNC_SEQ]         = seq;
+    }
 
     // header.
     bsp.magic = BSP_MAGIC;
@@ -947,6 +989,17 @@ BibleSync::TransmitInternal(char message_type,
 	retval = BSP_XMIT_OK;
 	if (message_type == BSP_BEACON)
 	    beacon_failed = false;
+
+	// keep a sync for its repeats.
+	if ((message_type == BSP_SYNC) && (repeat_count != 0))
+	{
+	    memcpy((void *)&repeat_bsp, (const void *)&bsp, sizeof(bsp));
+	    repeat_size = xmit_size;
+	    gettimeofday(&repeat_due, NULL);
+	    repeat_due.tv_sec  += repeat_delay / 1000;
+	    repeat_due.tv_usec += (repeat_delay % 1000) * 1000;
+	    repeat_remaining = repeat_count;
+	}
     }
     else if (message_type == BSP_BEACON)
     {
@@ -1010,6 +1063,33 @@ string BibleSync::getCurrentInterface()
     string now = inet_ntoa(interface_addr);
     interface_addr = in_use;
     return now;
+}
+
+// send our last sync again, if a repeat of it is owed: when due, or at
+// once with flush (and then no more of them).  a repeat that does not go
+// out is not tried again; the next may.
+void BibleSync::RepeatSync(bool flush)
+{
+    if ((repeat_remaining == 0) || (client_fd < 0))
+	return;
+
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    if (!flush && timercmp(&now, &repeat_due, <))
+	return;
+
+    sendto(client_fd, (char *)&repeat_bsp, repeat_size, 0,
+	   (struct sockaddr *)&client, sizeof(client));
+
+    if (flush)
+	repeat_remaining = 0;
+    else
+    {
+	--repeat_remaining;
+	repeat_due = now;
+	repeat_due.tv_sec  += repeat_delay / 1000;
+	repeat_due.tv_usec += (repeat_delay % 1000) * 1000;
+    }
 }
 
 void BibleSync::listenToSpeaker(bool listen, string speakerkey)
