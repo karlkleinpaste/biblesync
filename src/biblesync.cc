@@ -973,6 +973,16 @@ bool BibleSync::setPrivate(bool privacy)
 // user decision to listen or not to a certain speaker.
 // speakerkey is the UUID given during (*nav_func)('S', ...).
 //
+// the interface address a start would choose now; the one in use stays.
+string BibleSync::getCurrentInterface()
+{
+    struct in_addr in_use = interface_addr;
+    InterfaceAddress();
+    string now = inet_ntoa(interface_addr);
+    interface_addr = in_use;
+    return now;
+}
+
 void BibleSync::listenToSpeaker(bool listen, string speakerkey)
 {
     BibleSyncSpeakerMapIterator object = speakers.find(speakerkey);

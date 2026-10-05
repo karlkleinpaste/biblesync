@@ -417,6 +417,11 @@ public:
     // the interface address multicast goes out on and is joined on
     inline string getInterface(void) { return inet_ntoa(interface_addr); };
 
+    // the interface address a start would choose now (the one in use stays):
+    // differing from getInterface(), the network has changed under us and
+    // only a restart will be heard
+    string getCurrentInterface(void);
+
     // audience receiver
     static int Receive(void *myself); // assume C context: poll from timeout.
 
