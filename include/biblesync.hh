@@ -337,6 +337,7 @@ private:
     uint8_t beacon_countdown;	// progress toward our next beacon xmit
     uint8_t beacon_count;	// how many Receive() calls between beacon xmits
     bool beacon_failed;		// the last beacon did not go out (said once, then quiet until one does)
+    bool beacon_reply;		// our next beacon answers a newcomer: it goes out twice
 
     // track currently-known speaker set.
     BibleSyncSpeakerMap speakers;

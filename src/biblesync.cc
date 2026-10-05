@@ -90,6 +90,7 @@ BibleSync::BibleSync(string a, string v, string u)
       beacon_countdown(0),
       beacon_count(BSP_BEACON_COUNT),
       beacon_failed(false),
+      beacon_reply(false),
       mode(BSP_MODE_DISABLE),
       nav_func(NULL),
       passphrase("BibleSync"),
@@ -687,7 +688,10 @@ int BibleSync::ReceiveInternal()
 			// the end of this Receive() rather than at the next
 			// scheduled time.
 			if ((cmd == 'A') && (speakers.find(pkt_uuid) == speakers.end()))
+			{
 			    beacon_countdown = 1;
+			    beacon_reply = true;
+			}
 		    }
 		    else // bsp.msg_type == BSP_BEACON
 		    {
@@ -717,7 +721,10 @@ int BibleSync::ReceiveInternal()
 			    // meanwhile: ours goes out at the end of this
 			    // Receive() rather than at the next scheduled time.
 			    if (cmd == 'S')
+			    {
 				beacon_countdown = 1;
+				beacon_reply = true;
+			    }
 
 			    unsigned int old_speakers_size, new_speakers_size;
 			    old_speakers_size = speakers.size();
@@ -780,7 +787,17 @@ int BibleSync::ReceiveInternal()
 	(--beacon_countdown == 0))
     {
 	TransmitInternal(BSP_BEACON);
-	beacon_countdown = beacon_count;
+
+	// the answer to a newcomer goes out once more at the next
+	// Receive(): nobody resends multicast, and a newcomer who misses
+	// the one answer hears no sync of ours for a whole beacon interval.
+	if (beacon_reply)
+	{
+	    beacon_reply = false;
+	    beacon_countdown = 1;
+	}
+	else
+	    beacon_countdown = beacon_count;
     }
 
     return TRUE;
