@@ -287,6 +287,21 @@ Required for chat and useful only there. A free-from, newline-less text
 string to be shared in the conversation, intended to be displayed to all
 users.
 
+.in 3
+14. msg.sync.seq
+
+.in 7
+Optional, in navigation.  A decimal sequence number, counted from 1 by
+each sender for the life of its UUID and increased with every new
+synchronization it sends.  Multicast is not resent by the network, and
+wireless networks in particular lose some of it, so a sender may transmit
+the same synchronization packet several times, a second or two apart.  A
+receiver remembers the highest sequence number it has delivered from each
+speaker and silently drops a synchronization whose number is not greater.
+A synchronization without this field, or a receiver which does not know
+it, behaves as before: every copy navigates, to the same place.  A sender
+must not let a repeat follow a newer synchronization of its own.
+
 
 .in 3
 .ti 0

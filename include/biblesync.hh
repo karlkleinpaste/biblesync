@@ -256,6 +256,9 @@ typedef void (*BibleSync_navigate)(char,   string,
 #define	BSP_BEACON_COUNT	10	// xmit every N calls of Receive().
 #define	BSP_BEACON_MULTIPLIER	3	// multiplier for aging to death.
 
+// sync repetition constants
+#define	BSP_REPEAT_MAX		5	// most repeats of one sync.
+
 // message content names.
 #define BSP_APP_NAME			"app.name"		// req'd
 #define BSP_APP_VERSION			"app.version"		// opt
@@ -268,6 +271,7 @@ typedef void (*BibleSync_navigate)(char,   string,
 #define BSP_MSG_SYNC_ALTVERSE		"msg.sync.altVerse"	// opt
 #define BSP_MSG_SYNC_BIBLEABBREV	"msg.sync.bibleAbbrev"	// req'd
 #define BSP_MSG_SYNC_GROUP		"msg.sync.group"	// req'd
+#define BSP_MSG_SYNC_SEQ		"msg.sync.seq"		// opt
 #define BSP_MSG_PASSPHRASE		"msg.sync.passPhrase"	// req'd
 #define BSP_MSG_CHAT			"msg.chat"		// req'd for BSP_CHAT
 
@@ -278,7 +282,7 @@ typedef void (*BibleSync_navigate)(char,   string,
 
 #define	BSP_FIELDS_XMIT_ANNOUNCE	7
 #define	BSP_FIELDS_XMIT_CHAT		8
-#define	BSP_FIELDS_XMIT_SYNC		12
+#define	BSP_FIELDS_XMIT_SYNC		13
 
 #ifdef linux
 # define	BSP_OS	"Linux"
@@ -312,8 +316,9 @@ private:
 
     typedef struct _BibleSyncSpeaker {
 	bool      listen;			// nav for this guy?
-	uint8_t   countdown;			// lifetime aging.
+	uint16_t  countdown;			// lifetime aging.
 	string    addr;				// for spoof check.
+	uint32_t  seq;				// last sync delivered: repeat check.
     } BibleSyncSpeaker;
 
     // key string is origin uuid.
@@ -336,6 +341,19 @@ private:
     // when xmit-capable, we xmit BSP_BEACON every N calls of Receive().
     uint8_t beacon_countdown;	// progress toward our next beacon xmit
     uint8_t beacon_count;	// how many Receive() calls between beacon xmits
+    uint8_t beacon_multiplier;	// how many beacon intervals of silence age a speaker to death
+    bool beacon_failed;		// the last beacon did not go out (said once, then quiet until one does)
+    bool beacon_reply;		// our next beacon answers a newcomer: it goes out twice
+
+    // sync repetition: nobody resends multicast, so we may send each
+    // sync more than once.  receivers tell a repeat by its sequence number.
+    uint32_t sync_seq;			// sequence number of our last sync.
+    uint8_t repeat_count;		// how many more times each sync goes out.
+    uint16_t repeat_delay;		// milliseconds between those, at least.
+    uint8_t repeat_remaining;		// repeats of our last sync still owed.
+    struct timeval repeat_due;		// when the next of them is due.
+    BibleSyncMessage repeat_bsp;	// our last sync, exactly as sent.
+    unsigned int repeat_size;
 
     // track currently-known speaker set.
     BibleSyncSpeakerMap speakers;
@@ -370,6 +388,7 @@ private:
 
     // real receiver.
     int ReceiveInternal();		// C++ object context.
+    void RepeatSync(bool flush);	// send an owed repeat of our last sync.
     int InitSelectRead(char *, struct sockaddr_in *, BibleSyncMessage *);
 
     // real transmitter.
@@ -413,6 +432,29 @@ public:
     // obtain passphrase, for default choice.
     inline string getPassphrase(void) { return passphrase; };
 
+    // the interface address multicast goes out on and is joined on
+    inline string getInterface(void) { return inet_ntoa(interface_addr); };
+
+    // the interface address a start would choose now (the one in use stays):
+    // differing from getInterface(), the network has changed under us and
+    // only a restart will be heard
+    string getCurrentInterface(void);
+
+    // Multicast is resent by nobody, and some networks (Wi-Fi above all)
+    // lose a share of it.  every sync carries a sequence number; set
+    // repeat to have each sync sent count more times, at least delay_ms
+    // milliseconds apart: repeats go out as Receive() is called, so no
+    // more often than that.  a receiver delivers the first copy to arrive
+    // and drops the rest; one that knows no sequence numbers navigates
+    // again to where it already is.
+    // default is 0, no repeats.  count is force-bounded [0..BSP_REPEAT_MAX].
+    inline void setRepeat(uint8_t count, uint16_t delay_ms)
+    {
+	if (count > BSP_REPEAT_MAX) count = BSP_REPEAT_MAX;
+	repeat_count = count;
+	repeat_delay = delay_ms;
+    }
+
     // audience receiver
     static int Receive(void *myself); // assume C context: poll from timeout.
 
@@ -451,6 +493,18 @@ public:
 	if (count > 10) count = 10;
 	if (count < 3)  count = 3;
 	beacon_count = count;
+    }
+
+    // A speaker whose beacons stop is aged to death after this many of
+    // our own beacon intervals.  beacons are multicast, which nobody
+    // resends: where the network loses some, a short life drops speakers
+    // who are still there, and their syncs with them until the next
+    // beacon is heard.  default 3.
+    // value is force-bounded [3..255].
+    inline void setBeaconMultiplier(uint8_t multiplier)
+    {
+	if (multiplier < 3)  multiplier = 3;
+	beacon_multiplier = multiplier;
     }
 
     // set new user name
